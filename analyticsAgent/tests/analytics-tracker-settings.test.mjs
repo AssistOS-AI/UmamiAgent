@@ -8,6 +8,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MANIFEST = path.join(ROOT, 'manifest.json');
 const CONFIG = path.join(ROOT, 'IDE-plugins', 'analytics-tracker', 'config.json');
 const MCP_CONFIG = path.join(ROOT, 'mcp-config.json');
+const TOOL_JS = path.join(ROOT, 'tools', 'analytics_tool.mjs');
 const SETTINGS_JS = path.join(ROOT, 'IDE-plugins', 'analytics-tracker', 'analytics-tracker-settings', 'analytics-tracker-settings.js');
 const SETTINGS_HTML = path.join(ROOT, 'IDE-plugins', 'analytics-tracker', 'analytics-tracker-settings', 'analytics-tracker-settings.html');
 
@@ -16,6 +17,10 @@ test('analytics tracker settings are registered without guest-enabling MCP', asy
     const config = JSON.parse(await fs.readFile(CONFIG, 'utf8'));
 
     assert.equal(manifest.guest, undefined);
+    assert.equal(manifest.agent, 'sh /code/scripts/start-analytics-agent.sh');
+    assert.equal(manifest.profiles.default.install, 'sh /code/scripts/install-umami-mcp.sh');
+    assert.equal(manifest.profiles.default.env.UMAMI_MCP_PORT.default, '7301');
+    assert.equal(manifest.profiles.default.env.MCP_SECRET.sharedGeneratedSecret, true);
     assert.deepEqual(manifest.routerAccess.httpRoutes, [
         {
             path: '/IDE-plugins/analytics-tracker/*',
@@ -37,6 +42,19 @@ test('analytics tracker settings are registered without guest-enabling MCP', asy
     assert.equal(config.settings, 'analytics-tracker-settings');
 });
 
+test('analytics tool uses local HTTP MCP and OAuth bootstrap for MadsNyl', async () => {
+    const source = await fs.readFile(TOOL_JS, 'utf8');
+    assert.match(source, /class HttpMcpClient/);
+    assert.match(source, /bootstrapOAuthToken/);
+    assert.match(source, /\/oauth\/authorize/);
+    assert.match(source, /\/oauth\/token/);
+    assert.match(source, /\/mcp/);
+    assert.match(source, /get_active_visitors/);
+    assert.match(source, /toIsoTimestamp/);
+    assert.ok(!source.includes('@madsnyl/umami-mcp'));
+    assert.ok(!source.includes('StdioMcpClient'));
+});
+
 test('analytics MCP schemas use AgentServer property-map shape', async () => {
     const config = JSON.parse(await fs.readFile(MCP_CONFIG, 'utf8'));
     const websitesList = config.tools.find((tool) => tool.name === 'analytics_websites_list');
@@ -54,16 +72,24 @@ test('analytics tracker settings generate Umami script snippets', async () => {
 
     assert.match(source, /\/script\.js/);
     assert.match(source, /data-website-id/);
-    assert.match(source, /data-domains/);
-    assert.match(source, /data-auto-track="false"/);
+    assert.ok(!source.includes('data-domains'));
+    assert.ok(!source.includes('data-auto-track'));
+    assert.ok(!markup.includes('Allowed Domains'));
+    assert.ok(!markup.includes('Script Mode'));
     assert.match(source, /UUID_PATTERN/);
     assert.match(source, /website_id/);
+    assert.match(source, /result\?\.data/);
     assert.match(source, /analyticsWebsiteSelect/);
+    assert.match(source, /decodeToolPayload/);
+    assert.match(source, /MCP error/);
     assert.match(source, /console\.error/);
     assert.match(source, /createAgentClient\('\/analyticsAgent\/mcp'\)/);
     assert.match(source, /analytics_websites_list/);
     assert.ok(!source.includes('/analyticsAgent/mcp/script'));
     assert.match(markup, /id="analyticsWebsiteSelect"/);
+    assert.ok(!source.includes('analyticsLoadWebsitesButton'));
+    assert.ok(!markup.includes('Refresh Websites'));
+    assert.ok(!markup.includes('analyticsLoadWebsitesButton'));
     assert.ok(!markup.includes('Website UUID fallback'));
     assert.match(markup, /data-local-action="copyScriptCode"/);
 });

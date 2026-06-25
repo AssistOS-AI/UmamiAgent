@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 import fs from 'node:fs/promises';
-import fsSync from 'node:fs';
 import path from 'node:path';
-import { spawn } from 'node:child_process';
+import crypto from 'node:crypto';
 
-const DEFAULT_MCP_COMMAND = 'node /usr/local/lib/node_modules/npm/bin/npx-cli.js -y @madsnyl/umami-mcp';
 const DEFAULT_BASE_URL = 'http://analytics-umami:3000';
 const DEFAULT_OUTPUT_DIR = '/shared/deliverables/analytics';
+const DEFAULT_MCP_PORT = 7301;
+const DEFAULT_OAUTH_CLIENT_ID = 'analytics-agent';
+const TOKEN_CACHE_PATH = '/tmp/umami-mcp-access-token.json';
 
 const ACTIONS = {
     websites_list: {
@@ -35,7 +36,7 @@ const ACTIONS = {
         optional: ['websiteId', 'timezone']
     },
     active_get: {
-        candidates: ['get_active', 'active_visitors', 'active_get', 'active'],
+        candidates: ['get_active_visitors', 'get_active', 'active_visitors', 'active_get', 'active'],
         required: [],
         optional: ['websiteId']
     },
@@ -158,231 +159,233 @@ function validateActionInput(action, rawInput) {
     return out;
 }
 
-function analyticsEnv() {
-    const baseUrl = normalizeString(process.env.UMAMI_BASE_URL) || DEFAULT_BASE_URL;
-    const token = normalizeString(process.env.UMAMI_TOKEN);
-    const username = normalizeString(process.env.UMAMI_USERNAME) || 'admin';
-    const password = normalizeString(process.env.UMAMI_PASSWORD);
-    return {
-        ...process.env,
-        UMAMI_BASE_URL: baseUrl,
-        UMAMI_URL: baseUrl,
-        UMAMI_API_URL: `${baseUrl.replace(/\/+$/, '')}/api`,
-        UMAMI_TOKEN: token,
-        UMAMI_API_KEY: token,
-        UMAMI_USERNAME: username,
-        UMAMI_USER: username,
-        UMAMI_PASSWORD: password,
-        UMAMI_PASS: password
-    };
+function base64Url(buffer) {
+    return Buffer.from(buffer)
+        .toString('base64')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/g, '');
 }
 
-function splitCommand(command) {
-    const parts = [];
-    let current = '';
-    let quote = '';
-    let escaping = false;
-    for (const ch of String(command || '')) {
-        if (escaping) {
-            current += ch;
-            escaping = false;
-            continue;
-        }
-        if (ch === '\\') {
-            escaping = true;
-            continue;
-        }
-        if (quote) {
-            if (ch === quote) {
-                quote = '';
-            } else {
-                current += ch;
+function parseEventStream(text) {
+    const events = [];
+    let data = [];
+    for (const line of String(text || '').split(/\r?\n/)) {
+        if (!line) {
+            if (data.length) {
+                events.push(data.join('\n'));
+                data = [];
             }
             continue;
         }
-        if (ch === '"' || ch === "'") {
-            quote = ch;
-            continue;
+        if (line.startsWith('data:')) {
+            data.push(line.slice(5).trimStart());
         }
-        if (/\s/.test(ch)) {
-            if (current) {
-                parts.push(current);
-                current = '';
-            }
-            continue;
-        }
-        current += ch;
     }
-    if (escaping) current += '\\';
-    if (quote) throw new Error('UMAMI_MCP_COMMAND has an unterminated quote.');
-    if (current) parts.push(current);
-    if (!parts.length) throw new Error('UMAMI_MCP_COMMAND is empty.');
-    return parts;
+    if (data.length) events.push(data.join('\n'));
+    return events.map((event) => safeJson(event, null)).filter(Boolean);
 }
 
-function parseMcpOutputLine(line) {
-    const trimmed = String(line || '').trim();
-    if (!trimmed) return null;
-    return safeJson(trimmed, null);
+async function readJsonResponse(response, label) {
+    const text = await response.text();
+    const contentType = response.headers.get('content-type') || '';
+    const parsed = contentType.includes('text/event-stream')
+        ? parseEventStream(text).at(-1)
+        : safeJson(text, null);
+    if (!response.ok) {
+        throw new Error(`${label} failed (${response.status}): ${redact(text)}`);
+    }
+    if (!parsed) {
+        throw new Error(`${label} returned non-JSON response: ${redact(text)}`);
+    }
+    return parsed;
 }
 
-class StdioMcpClient {
-    constructor(command) {
-        this.command = command;
+function compactHttpText(text) {
+    const stripped = String(text || '')
+        .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+        .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    return stripped || String(text || '').trim();
+}
+
+function mcpEndpoint() {
+    const port = Number(process.env.UMAMI_MCP_PORT || DEFAULT_MCP_PORT);
+    return `http://127.0.0.1:${Number.isFinite(port) ? port : DEFAULT_MCP_PORT}/mcp`;
+}
+
+function oauthBaseUrl() {
+    const port = Number(process.env.UMAMI_MCP_PORT || DEFAULT_MCP_PORT);
+    return `http://127.0.0.1:${Number.isFinite(port) ? port : DEFAULT_MCP_PORT}`;
+}
+
+async function readTokenCache() {
+    const parsed = safeJson(await fs.readFile(TOKEN_CACHE_PATH, 'utf8').catch(() => ''), null);
+    if (!parsed || typeof parsed.accessToken !== 'string') return '';
+    if (Number(parsed.expiresAt || 0) <= Date.now() + 60000) return '';
+    return parsed.accessToken;
+}
+
+async function writeTokenCache(accessToken, expiresIn) {
+    await fs.mkdir(path.dirname(TOKEN_CACHE_PATH), { recursive: true });
+    await fs.writeFile(TOKEN_CACHE_PATH, JSON.stringify({
+        accessToken,
+        expiresAt: Date.now() + Math.max(1, Number(expiresIn) || 3600) * 1000
+    }), { mode: 0o600 });
+}
+
+async function bootstrapOAuthToken({ force = false } = {}) {
+    if (!force) {
+        const cached = await readTokenCache();
+        if (cached) return cached;
+    }
+
+    const username = normalizeString(process.env.UMAMI_USERNAME) || 'admin';
+    const password = normalizeString(process.env.UMAMI_PASSWORD) || 'umami';
+
+    const baseUrl = oauthBaseUrl();
+    const clientId = normalizeString(process.env.OAUTH_CLIENT_ID) || DEFAULT_OAUTH_CLIENT_ID;
+    const redirectUri = normalizeString(process.env.OAUTH_REDIRECT_URI) || `${baseUrl}/oauth/callback`;
+    const codeVerifier = base64Url(crypto.randomBytes(32));
+    const codeChallenge = base64Url(crypto.createHash('sha256').update(codeVerifier).digest());
+    const state = base64Url(crypto.randomBytes(16));
+
+    const authorizeBody = new URLSearchParams({
+        username,
+        password,
+        redirect_uri: redirectUri,
+        client_id: clientId,
+        code_challenge: codeChallenge,
+        state
+    });
+    const authorizeResponse = await fetch(`${baseUrl}/oauth/authorize`, {
+        method: 'POST',
+        redirect: 'manual',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        body: authorizeBody
+    });
+    if (![302, 303].includes(authorizeResponse.status)) {
+        const text = await authorizeResponse.text().catch(() => '');
+        throw new Error(`umami-mcp OAuth authorize failed (${authorizeResponse.status}): ${redact(compactHttpText(text))}`);
+    }
+    const location = authorizeResponse.headers.get('location');
+    if (!location) {
+        throw new Error('umami-mcp OAuth authorize did not return a redirect location.');
+    }
+    const redirect = new URL(location);
+    if (redirect.searchParams.get('state') !== state) {
+        throw new Error('umami-mcp OAuth state mismatch.');
+    }
+    const code = redirect.searchParams.get('code');
+    if (!code) {
+        throw new Error('umami-mcp OAuth redirect did not include an authorization code.');
+    }
+
+    const tokenResponse = await fetch(`${baseUrl}/oauth/token`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+            grant_type: 'authorization_code',
+            code,
+            code_verifier: codeVerifier,
+            client_id: clientId
+        })
+    });
+    const token = await readJsonResponse(tokenResponse, 'umami-mcp OAuth token');
+    const accessToken = normalizeString(token.access_token);
+    if (!accessToken) {
+        throw new Error('umami-mcp OAuth token response did not include access_token.');
+    }
+    await writeTokenCache(accessToken, token.expires_in);
+    return accessToken;
+}
+
+class HttpMcpClient {
+    constructor() {
+        this.endpoint = mcpEndpoint();
+        this.messageId = 0;
+        this.protocolVersion = '2025-06-18';
+        this.sessionId = '';
+        this.accessToken = '';
+        this.initialized = false;
+    }
+
+    nextId() {
+        this.messageId += 1;
+        return `analytics-${this.messageId}`;
     }
 
     async start() {
-        return;
+        this.accessToken = await bootstrapOAuthToken();
+        await this.initialize();
     }
 
-    async batch(requests) {
-        const [program, ...args] = splitCommand(this.command);
-        debug('starting umami-mcp batch:', program, args.join(' '));
-        let id = 1;
-        const messages = [
-            {
-                jsonrpc: '2.0',
-                id: id++,
-                method: 'initialize',
-                params: {
-                    protocolVersion: '2025-06-18',
-                    capabilities: {},
-                    clientInfo: {
-                        name: 'achilles-analytics-agent',
-                        version: '0.1.0'
-                    }
-                }
-            },
-            {
-                jsonrpc: '2.0',
-                method: 'notifications/initialized',
-                params: {}
-            }
-        ];
-        const responseIds = [];
-        for (const request of requests) {
-            const requestId = id++;
-            responseIds.push(requestId);
-            messages.push({
-                jsonrpc: '2.0',
-                id: requestId,
-                method: request.method,
-                params: request.params || {}
-            });
-        }
-
-        const tempDir = process.env.TMPDIR || '/tmp';
-        const tempPath = path.join(tempDir, `analytics-umami-mcp-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}.jsonl`);
-        fsSync.writeFileSync(tempPath, messages.map((message) => JSON.stringify(message)).join('\n') + '\n', {
-            mode: 0o600
-        });
-        const inputFd = fsSync.openSync(tempPath, 'r');
-        const child = spawn(program, args, {
-            cwd: fsSync.existsSync('/code') ? '/code' : process.cwd(),
-            env: analyticsEnv(),
-            stdio: [inputFd, 'pipe', 'pipe']
-        });
-
-        let stdout = '';
-        let stderr = '';
-        const byId = new Map();
-        let settled = false;
-        let resolveDone;
-        let rejectDone;
-        const done = new Promise((resolve, reject) => {
-            resolveDone = resolve;
-            rejectDone = reject;
-        });
-        const tryResolveResponses = () => {
-            if (settled) return;
-            if (!responseIds.every((responseId) => byId.has(responseId))) return;
-            settled = true;
-            try { child.kill('SIGTERM'); } catch {}
-            resolveDone();
+    async send(method, params = {}, { notification = false, retryAuth = true } = {}) {
+        const id = notification ? undefined : this.nextId();
+        const headers = {
+            accept: 'application/json, text/event-stream',
+            'content-type': 'application/json',
+            authorization: `Bearer ${this.accessToken}`
         };
-        child.stdout.setEncoding('utf8');
-        child.stderr.setEncoding('utf8');
-        child.stdout.on('data', (chunk) => {
-            stdout += chunk;
-            for (;;) {
-                const idx = stdout.indexOf('\n');
-                if (idx < 0) break;
-                const line = stdout.slice(0, idx);
-                stdout = stdout.slice(idx + 1);
-                const msg = parseMcpOutputLine(line);
-                if (!msg || msg.id === undefined) continue;
-                byId.set(msg.id, msg);
-            }
-            tryResolveResponses();
+        if (this.sessionId) headers['mcp-session-id'] = this.sessionId;
+        if (this.protocolVersion) headers['mcp-protocol-version'] = this.protocolVersion;
+        const response = await fetch(this.endpoint, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+                jsonrpc: '2.0',
+                ...(id ? { id } : {}),
+                method,
+                params
+            })
         });
-        child.stderr.on('data', (chunk) => { stderr += chunk; });
-
-        const exit = new Promise((resolve, reject) => {
-            child.on('error', (error) => {
-                const err = new Error(`Failed to start umami-mcp command '${redact(this.command)}': ${error.message}`);
-                reject(err);
-                if (!settled) {
-                    settled = true;
-                    rejectDone(err);
-                }
-            });
-            child.on('exit', (code, signal) => {
-                debug('umami-mcp batch exit:', code ?? '', signal ?? '');
-                try { fsSync.closeSync(inputFd); } catch {}
-                try { fsSync.unlinkSync(tempPath); } catch {}
-                if (code && code !== 0) {
-                    const err = new Error(`umami-mcp exited (${code ?? signal ?? 'unknown'}): ${redact(stderr)}`);
-                    reject(err);
-                    if (!settled) {
-                        settled = true;
-                        rejectDone(err);
-                    }
-                } else {
-                    resolve();
-                    if (!settled) {
-                        settled = true;
-                        rejectDone(new Error(`umami-mcp exited before returning all responses. stderr: ${redact(stderr)}`));
-                    }
-                }
-            });
-        });
-
-        await Promise.race([
-            done,
-            new Promise((_, reject) => setTimeout(() => {
-                if (!settled) settled = true;
-                try { child.kill('SIGTERM'); } catch {}
-                reject(new Error(`Timed out waiting for umami-mcp batch. stderr: ${redact(stderr)}`));
-            }, Number(process.env.UMAMI_MCP_TIMEOUT_MS || 30000)))
-        ]);
-        await Promise.race([exit.catch(() => {}), new Promise((resolve) => setTimeout(resolve, 500))]);
-
-        return responseIds.map((requestId) => {
-            const msg = byId.get(requestId);
-            if (!msg) {
-                throw new Error(`umami-mcp did not return response id ${requestId}. stderr: ${redact(stderr)}`);
+        if (response.status === 401 && retryAuth) {
+            this.accessToken = await bootstrapOAuthToken({ force: true });
+            return this.send(method, params, { notification, retryAuth: false });
+        }
+        const nextSessionId = response.headers.get('mcp-session-id');
+        if (nextSessionId) this.sessionId = nextSessionId;
+        if (notification) {
+            if (!response.ok) {
+                const text = await response.text().catch(() => '');
+                throw new Error(`MCP notification ${method} failed (${response.status}): ${redact(text)}`);
             }
-            if (msg.error) {
-                throw new Error(msg.error.message || JSON.stringify(msg.error));
+            return null;
+        }
+        const payload = await readJsonResponse(response, `MCP ${method}`);
+        if (payload.error) {
+            throw new Error(payload.error.message || JSON.stringify(payload.error));
+        }
+        return payload.result;
+    }
+
+    async initialize() {
+        if (this.initialized) return;
+        const result = await this.send('initialize', {
+            protocolVersion: this.protocolVersion,
+            capabilities: {},
+            clientInfo: {
+                name: 'achilles-analytics-agent',
+                version: '0.1.0'
             }
-            return msg.result;
         });
+        this.protocolVersion = normalizeString(result?.protocolVersion, this.protocolVersion);
+        await this.send('notifications/initialized', {}, { notification: true });
+        this.initialized = true;
     }
 
     async listTools() {
-        const [result] = await this.batch([{ method: 'tools/list' }]);
+        const result = await this.send('tools/list', {});
         return Array.isArray(result?.tools) ? result.tools : [];
     }
 
     async callTool(name, args) {
-        const [result] = await this.batch([{
-            method: 'tools/call',
-            params: {
-                name,
-                arguments: args
-            }
-        }]);
-        return result;
+        return this.send('tools/call', {
+            name,
+            arguments: args || {}
+        });
     }
 
     async close() {
@@ -407,6 +410,23 @@ function chooseTool(tools, candidates) {
     throw new Error(`No compatible umami-mcp tool found. Wanted one of: ${candidates.join(', ')}. Available: ${names.join(', ') || '(none)'}`);
 }
 
+function toIsoTimestamp(value, name) {
+    const date = new Date(Number(value));
+    if (Number.isNaN(date.getTime())) {
+        throw new Error(`${name} must be a valid millisecond timestamp.`);
+    }
+    return date.toISOString();
+}
+
+function adaptUpstreamInput(action, input) {
+    const out = { ...(input || {}) };
+    if (out.startAt !== undefined) out.startAt = toIsoTimestamp(out.startAt, 'startAt');
+    if (out.endAt !== undefined) out.endAt = toIsoTimestamp(out.endAt, 'endAt');
+    if (action === 'pageviews_get' && !out.unit) out.unit = 'day';
+    if (action === 'metrics_get' && out.type === 'url') out.type = 'path';
+    return out;
+}
+
 function extractContent(result) {
     if (Array.isArray(result?.content)) {
         const textItems = result.content
@@ -425,7 +445,7 @@ async function callUmamiMcp(client, action, input) {
     const spec = ACTIONS[action];
     const tools = await client.listTools();
     const toolName = chooseTool(tools, spec.candidates);
-    const result = await client.callTool(toolName, input);
+    const result = await client.callTool(toolName, adaptUpstreamInput(action, input));
     return {
         action,
         upstreamTool: toolName,
@@ -470,7 +490,7 @@ async function generateReport(client, rawInput) {
     const label = normalizeString(rawInput.label) || `${dateSlug(input.startAt)}-to-${dateSlug(input.endAt)}`;
     const stats = await callUmamiMcp(client, 'stats_get', input);
     const pageviews = await callUmamiMcp(client, 'pageviews_get', input);
-    const topPages = await callUmamiMcp(client, 'metrics_get', { ...input, type: 'url', limit: 25 });
+    const topPages = await callUmamiMcp(client, 'metrics_get', { ...input, type: 'path', limit: 25 });
     const referrers = await callUmamiMcp(client, 'metrics_get', { ...input, type: 'referrer', limit: 25 });
     const countries = await callUmamiMcp(client, 'metrics_get', { ...input, type: 'country', limit: 25 });
 
@@ -522,8 +542,7 @@ async function generateReport(client, rawInput) {
 
 async function main() {
     const action = normalizeString(process.env.ANALYTICS_ACTION || process.env.TOOL_NAME);
-    const command = normalizeString(process.env.UMAMI_MCP_COMMAND) || DEFAULT_MCP_COMMAND;
-    const client = new StdioMcpClient(command);
+    const client = new HttpMcpClient();
     const clientStart = client.start();
     const envelope = safeJson(await readStdin(), {});
     const input = normalizeInput(envelope);

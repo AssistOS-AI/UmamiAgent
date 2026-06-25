@@ -6,7 +6,7 @@
 
 - Ploinky AgentServer serves `/mcp`.
 - `mcp-config.json` exposes one tool per allowed analytics operation.
-- `tools/analytics_tool.mjs` calls `MadsNyl/umami-mcp` internally.
+- `tools/analytics_tool.mjs` calls the internal `MadsNyl/umami-mcp` HTTP MCP server.
 - `analyticsInfra` runs the self-hosted Umami application.
 - `analyticsDB` runs PostgreSQL for Umami.
 
@@ -35,32 +35,24 @@ Website tracking snippets should send browser events directly to the Umami app U
 `IDE-plugins/analytics-tracker/` contributes the `Analytics Tracker` settings entry in AchillesIDE. The settings modal generates an Umami browser tracking script from:
 
 - the public Umami URL, defaulting to `http://127.0.0.1:3000`;
-- the Umami website UUID copied from the dashboard;
-- optional allowed domains;
-- standard tracking or manual-events-only mode.
+- the Umami website selected from the Umami MCP website list.
 
-The plugin calls `analytics_websites_list` through `/analyticsAgent/mcp` and shows the returned websites in a selector when Umami credentials are configured. Errors from the MCP call are displayed in the modal and logged with `console.error`. Tracking data still goes directly from the website browser to Umami's `/script.js` endpoint, not to MCP.
+The plugin calls `analytics_websites_list` through `/analyticsAgent/mcp` when the modal opens and shows the returned websites in a selector when Umami credentials are configured. If a new website is added in the Umami dashboard, close and reopen the settings modal to reload the list. Errors from the MCP call are displayed in the modal and logged with `console.error`. Tracking data still goes directly from the website browser to Umami's `/script.js` endpoint, not to MCP.
 
 ## MCP Backend
 
-Set `UMAMI_MCP_COMMAND` when the upstream server uses a different install/run command. The default command is:
+`scripts/install-umami-mcp.sh` installs Bun, clones `https://github.com/MadsNyl/umami-mcp.git`, runs `bun install`, and builds the upstream MCP server. `scripts/start-analytics-agent.sh` starts that server on `127.0.0.1:${UMAMI_MCP_PORT:-7301}` before launching Ploinky AgentServer.
 
-```bash
-node /usr/local/lib/node_modules/npm/bin/npx-cli.js -y @madsnyl/umami-mcp
-```
-
-The absolute `npx-cli.js` path avoids the broken `/usr/local/bin/npx` shim in the current Ploinky node image.
-
-The wrapper passes these environment variables to the internal MCP process:
+The wrapper authenticates to the internal MCP server with OAuth using:
 
 - `UMAMI_BASE_URL`
-- `UMAMI_API_URL`
 - `UMAMI_USERNAME`
-- `UMAMI_PASSWORD`
-- `UMAMI_TOKEN`
-- `UMAMI_API_KEY`
+- `UMAMI_PASSWORD`, defaulting to Umami's first-login password `umami`
+- `MCP_SECRET`
+- `OAUTH_CLIENT_ID`
+- `OAUTH_REDIRECT_URI`
 
-Set `UMAMI_TOKEN` or `UMAMI_PASSWORD` before calling analytics tools. The manifest intentionally does not hardcode the upstream default password.
+Fresh local installs work with Umami's upstream default `admin` / `umami`. After changing the dashboard password, update `UMAMI_PASSWORD` so the read-only adapter can keep authenticating.
 
 ## Exposed Tools
 

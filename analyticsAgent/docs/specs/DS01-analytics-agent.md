@@ -19,9 +19,9 @@ The agent does not start host-side Docker Compose. It depends on two Ploinky-man
 
 The Umami dashboard is local-only by default through `127.0.0.1:3000`, exposed by `analyticsInfra`. The agent container reaches the API through `UMAMI_BASE_URL`, defaulting to `http://analytics-umami:3000`.
 
-`MadsNyl/umami-mcp` is an internal backend adapter. Ploinky users and agents never call it directly. `analytics_tool.mjs` starts the upstream MCP process through `UMAMI_MCP_COMMAND`, lists available upstream tools, maps each public Ploinky tool to a compatible upstream tool, validates input, and returns redacted output. The default `UMAMI_MCP_COMMAND` uses `node /usr/local/lib/node_modules/npm/bin/npx-cli.js -y @madsnyl/umami-mcp` because the current Ploinky node image has broken `/usr/local/bin/npm` and `/usr/local/bin/npx` shims.
+`MadsNyl/umami-mcp` is an internal backend adapter. Ploinky users and agents never call it directly. `scripts/install-umami-mcp.sh` installs Bun, clones the upstream GitHub repository, installs dependencies, and builds the server. `scripts/start-analytics-agent.sh` starts MadsNyl as an HTTP MCP server on `127.0.0.1:${UMAMI_MCP_PORT:-7301}` and then starts Ploinky AgentServer. `analytics_tool.mjs` authenticates to the internal MadsNyl server through its OAuth flow, lists available upstream tools, maps each public Ploinky tool to a compatible upstream tool, validates input, and returns redacted output.
 
-The agent manifest must not hardcode the upstream default Umami password. Operators configure `UMAMI_TOKEN` or `UMAMI_PASSWORD` after changing the first-login credentials.
+The agent defaults `UMAMI_USERNAME` to `admin` and `UMAMI_PASSWORD` to Umami's first-login password `umami` so a fresh local self-hosted install works without manual environment setup. Operators configure `UMAMI_PASSWORD` after changing the dashboard password. MadsNyl's SQLite session database is ephemeral at `/tmp/umami-mcp/sessions.db`; no host volume is used for those OAuth sessions.
 
 ## Public MCP Tools
 
@@ -42,7 +42,7 @@ Website tracking snippets send browser events directly to the reachable Umami ap
 
 `analyticsAgent` exposes static AchillesIDE plugin assets at `/IDE-plugins/analytics-tracker/*` with `access: "guest"` so the settings modal can load through the router. The manifest must not set global `guest: true` for this purpose, because the MCP surface remains policy-controlled and should not become guest-callable.
 
-The plugin contributes the `Analytics Tracker` workspace settings entry through `ideSettings`. Its `analytics-tracker-settings` modal lets the operator enter the browser-reachable Umami URL, select a Website UUID from `analytics_websites_list`, optionally set allowed domains, and copy the generated script snippet. The modal must not ask the operator to paste the raw UUID manually. MCP load errors must be visible in the modal and logged to the browser console.
+The plugin contributes the `Analytics Tracker` workspace settings entry through `ideSettings`. Its `analytics-tracker-settings` modal lets the operator enter the browser-reachable Umami URL, select a Website UUID from `analytics_websites_list` loaded on modal open, and copy the generated script snippet. The modal must not ask the operator to paste the raw UUID manually and must not expose a manual website refresh button; operators close and reopen the modal after adding websites in Umami. MCP load errors must be visible in the modal and logged to the browser console.
 
 `mcp-config.json` uses the AgentServer property-map input schema shape, not JSON Schema's `{ type, properties }` wrapper. A no-argument tool such as `analytics_websites_list` must use `inputSchema: {}`. Otherwise AgentServer/MCP treats `type` and `properties` as user arguments and rejects calls before the tool reaches the Umami MCP adapter.
 
@@ -53,7 +53,6 @@ The generated snippet uses Umami's browser tracker:
   defer
   src="http://127.0.0.1:3000/script.js"
   data-website-id="WEBSITE_ID"
-  data-domains="localhost,127.0.0.1"
 ></script>
 ```
 

@@ -1,9 +1,7 @@
 const STORAGE_KEY = 'analytics-tracker-settings:v1';
 const DEFAULTS = Object.freeze({
     umamiUrl: 'http://127.0.0.1:3000',
-    websiteId: '',
-    domains: 'localhost,127.0.0.1',
-    scriptMode: 'standard'
+    websiteId: ''
 });
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -19,10 +17,6 @@ function normalizeUrl(value, fallback = DEFAULTS.umamiUrl) {
     } catch {
         return fallback;
     }
-}
-
-function normalizeScriptMode(value) {
-    return value === 'manual' ? 'manual' : 'standard';
 }
 
 function isValidWebsiteId(value) {
@@ -66,6 +60,28 @@ function tryParseJson(text) {
     }
 }
 
+function decodeToolPayload(result) {
+    const text = extractToolText(result);
+    const parsed = tryParseJson(text);
+    if (parsed && typeof parsed === 'object') {
+        if (parsed.ok === false) {
+            throw new Error(normalizeString(parsed.error, 'Analytics tool failed.'));
+        }
+        return parsed;
+    }
+
+    const normalized = normalizeString(text);
+    if (/^(MCP error|Error:|umami-mcp exited|Failed to start umami-mcp)/i.test(normalized)) {
+        throw new Error(normalized);
+    }
+
+    if (!normalized) {
+        throw new Error('Analytics tool returned an empty response.');
+    }
+
+    throw new Error(`Analytics tool returned a non-JSON response: ${normalized}`);
+}
+
 function readStoredSettings() {
     try {
         const parsed = tryParseJson(window.localStorage?.getItem(STORAGE_KEY));
@@ -84,9 +100,7 @@ function writeStoredSettings(state) {
     try {
         window.localStorage?.setItem(STORAGE_KEY, JSON.stringify({
             umamiUrl: state.umamiUrl,
-            websiteId: normalizeStoredWebsiteId(state.websiteId),
-            domains: state.domains,
-            scriptMode: state.scriptMode
+            websiteId: normalizeStoredWebsiteId(state.websiteId)
         }));
     } catch {
         // Local storage is optional for this modal.
@@ -105,6 +119,10 @@ function normalizeWebsiteList(payload) {
         ? payload.websites
         : Array.isArray(payload?.data)
             ? payload.data
+            : Array.isArray(payload?.result?.websites)
+                ? payload.result.websites
+                : Array.isArray(payload?.result?.data)
+                    ? payload.result.data
             : Array.isArray(payload)
                 ? payload
                 : [];
@@ -135,7 +153,7 @@ function formatErrorMessage(error, fallback) {
     return message.length > 260 ? `${message.slice(0, 257)}...` : message;
 }
 
-function buildScriptCode({ umamiUrl, websiteId, domains, scriptMode }) {
+function buildScriptCode({ umamiUrl, websiteId }) {
     const src = `${normalizeUrl(umamiUrl)}/script.js`;
     const lines = [
         '<script',
@@ -143,13 +161,6 @@ function buildScriptCode({ umamiUrl, websiteId, domains, scriptMode }) {
         `  src="${escapeAttribute(src)}"`,
         `  data-website-id="${escapeAttribute(websiteId)}"`
     ];
-    const normalizedDomains = normalizeString(domains);
-    if (normalizedDomains) {
-        lines.push(`  data-domains="${escapeAttribute(normalizedDomains)}"`);
-    }
-    if (normalizeScriptMode(scriptMode) === 'manual') {
-        lines.push('  data-auto-track="false"');
-    }
     lines.push('></script>');
     return lines.join('\n');
 }
@@ -163,8 +174,6 @@ export class AnalyticsTrackerSettingsSettings {
         this.state = {
             umamiUrl: normalizeUrl(stored.umamiUrl, DEFAULTS.umamiUrl),
             websiteId: normalizeStoredWebsiteId(stored.websiteId),
-            domains: normalizeString(stored.domains, DEFAULTS.domains),
-            scriptMode: normalizeScriptMode(stored.scriptMode),
             websites: [],
             status: '',
             statusType: ''
@@ -190,10 +199,7 @@ export class AnalyticsTrackerSettingsSettings {
     cacheElements() {
         this.umamiUrlInput = this.element.querySelector('#analyticsUmamiUrl');
         this.websiteSelect = this.element.querySelector('#analyticsWebsiteSelect');
-        this.domainsInput = this.element.querySelector('#analyticsDomains');
-        this.scriptModeInput = this.element.querySelector('#analyticsScriptMode');
         this.copyButton = this.element.querySelector('#analyticsCopyButton');
-        this.loadWebsitesButton = this.element.querySelector('#analyticsLoadWebsitesButton');
         this.snippetArea = this.element.querySelector('#analyticsScriptSnippet');
         this.statusElement = this.element.querySelector('#analyticsSettingsStatus');
     }
@@ -217,17 +223,6 @@ export class AnalyticsTrackerSettingsSettings {
             this.persistAndRender();
         });
 
-        this.domainsInput?.addEventListener('input', (event) => {
-            this.state.domains = String(event.target?.value || '').trim();
-            this.clearStatus();
-            this.persistAndRender();
-        });
-
-        this.scriptModeInput?.addEventListener('change', (event) => {
-            this.state.scriptMode = normalizeScriptMode(event.target?.value);
-            this.clearStatus();
-            this.persistAndRender();
-        });
     }
 
     syncInputsFromState() {
@@ -235,12 +230,6 @@ export class AnalyticsTrackerSettingsSettings {
             this.umamiUrlInput.value = this.state.umamiUrl;
         }
         this.syncWebsiteSelect();
-        if (this.domainsInput) {
-            this.domainsInput.value = this.state.domains;
-        }
-        if (this.scriptModeInput) {
-            this.scriptModeInput.value = this.state.scriptMode;
-        }
     }
 
     async ensureMcpClient() {
@@ -337,9 +326,6 @@ export class AnalyticsTrackerSettingsSettings {
     }
 
     async loadWebsites(options = {}) {
-        if (this.loadWebsitesButton) {
-            this.loadWebsitesButton.disabled = true;
-        }
         if (!options.quiet) {
             this.state.status = 'Loading websites...';
             this.state.statusType = '';
@@ -349,7 +335,7 @@ export class AnalyticsTrackerSettingsSettings {
         try {
             const client = await this.ensureMcpClient();
             const toolResult = await client.callTool('analytics_websites_list', {});
-            const payload = tryParseJson(extractToolText(toolResult));
+            const payload = decodeToolPayload(toolResult);
             const websites = normalizeWebsiteList(payload);
             this.state.websites = websites;
             if (!this.state.websiteId && websites.length === 1) {
@@ -368,10 +354,6 @@ export class AnalyticsTrackerSettingsSettings {
             this.state.statusType = 'error';
             console.error('[analytics-tracker-settings] Failed to load websites through MCP', error);
             this.renderDerived();
-        } finally {
-            if (this.loadWebsitesButton) {
-                this.loadWebsitesButton.disabled = false;
-            }
         }
     }
 

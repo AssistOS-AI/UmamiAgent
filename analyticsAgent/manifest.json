@@ -1,6 +1,7 @@
 {
   "container": "docker.io/assistos/ploinky-node:24-bookworm-tools",
   "lite-sandbox": true,
+  "agent": "sh /code/scripts/start-analytics-agent.sh",
   "readiness": {
     "protocol": "mcp"
   },
@@ -27,6 +28,7 @@
   },
   "profiles": {
     "default": {
+      "install": "sh /code/scripts/install-umami-mcp.sh",
       "env": {
         "UMAMI_BASE_URL": {
           "required": false,
@@ -37,7 +39,8 @@
           "default": "admin"
         },
         "UMAMI_PASSWORD": {
-          "required": false
+          "required": false,
+          "default": "umami"
         },
         "UMAMI_TOKEN": {
           "required": false
@@ -48,9 +51,25 @@
         "UMAMI_TIMEZONE": {
           "required": false
         },
-        "UMAMI_MCP_COMMAND": {
+        "UMAMI_MCP_PORT": {
           "required": false,
-          "default": "node /usr/local/lib/node_modules/npm/bin/npx-cli.js -y @madsnyl/umami-mcp"
+          "default": "7301"
+        },
+        "MCP_SECRET": {
+          "name": "UMAMI_MCP_SECRET",
+          "required": true,
+          "sharedGeneratedSecret": true
+        },
+        "OAUTH_CLIENT_ID": {
+          "required": false,
+          "default": "analytics-agent"
+        },
+        "OAUTH_REDIRECT_URI": {
+          "required": false
+        },
+        "UMAMI_MCP_SQLITE_PATH": {
+          "required": false,
+          "default": "/tmp/umami-mcp/sessions.db"
         },
         "ANALYTICS_OUTPUT_DIR": {
           "required": false,
