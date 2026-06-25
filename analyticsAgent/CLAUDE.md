@@ -11,6 +11,7 @@
 - The Umami dashboard is host-local by default at `http://127.0.0.1:3000`.
 - The internal Umami API URL is `http://analytics-umami:3000`.
 - The MCP implementation calls `MadsNyl/umami-mcp` internally through `UMAMI_MCP_COMMAND`; do not expose that upstream MCP server directly to Ploinky.
+- `IDE-plugins/analytics-tracker/` registers the AchillesIDE `Analytics Tracker` settings modal and generates browser snippets for Umami's public `/script.js`.
 
 ## Security
 
@@ -20,6 +21,7 @@
 - Keep Umami database passwords, app secrets, login passwords, and tokens out of tracked files.
 - Use Ploinky vars or environment overrides for production credentials.
 - Website tracking snippets must send events to Umami, not to `analyticsAgent`.
+- Do not add `guest: true` only to make the settings plugin load. Use explicit `routerAccess.httpRoutes` for static plugin assets so `/mcp` does not become guest-enabled.
 
 ## Local Setup
 

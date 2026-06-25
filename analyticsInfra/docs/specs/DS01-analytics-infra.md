@@ -14,7 +14,7 @@ summary: Defines the Ploinky-managed Umami application service used by analytics
 
 The agent depends on `analyticsDB`, joins the shared `analytics` network as `analytics-umami`, and binds the Umami dashboard to `127.0.0.1:3000:3000` for local browser access.
 
-`scripts/startUmami.sh` constructs `DATABASE_URL` from Ploinky-provided environment values and starts Umami with `pnpm start-docker`. `POSTGRES_PASSWORD` comes from the shared generated secret `UMAMI_POSTGRES_PASSWORD`; `APP_SECRET` comes from the shared generated secret `UMAMI_APP_SECRET`.
+`scripts/startUmami.sh` constructs `DATABASE_URL` from Ploinky-provided environment values, clears Ploinky's `NODE_OPTIONS` symlink flags because they break Umami's pnpm dependency layout, runs Umami's `check-db` package script through the absolute npm CLI path, updates the tracker, and starts `node server.js`. The absolute npm path avoids the broken `/usr/local/bin/npm` and `/usr/local/bin/pnpm` shims, and running the steps explicitly avoids the broken `npm-run-all` aggregate path in this image. `POSTGRES_PASSWORD` comes from the shared generated secret `UMAMI_POSTGRES_PASSWORD`; `APP_SECRET` comes from the shared generated secret `UMAMI_APP_SECRET`.
 
 ## Decisions & Questions
 

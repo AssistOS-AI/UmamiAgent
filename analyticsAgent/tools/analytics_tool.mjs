@@ -4,7 +4,7 @@ import fsSync from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 
-const DEFAULT_MCP_COMMAND = 'npx -y @madsnyl/umami-mcp';
+const DEFAULT_MCP_COMMAND = 'node /usr/local/lib/node_modules/npm/bin/npx-cli.js -y @madsnyl/umami-mcp';
 const DEFAULT_BASE_URL = 'http://analytics-umami:3000';
 const DEFAULT_OUTPUT_DIR = '/shared/deliverables/analytics';
 

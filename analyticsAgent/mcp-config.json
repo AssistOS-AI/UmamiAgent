@@ -7,11 +7,7 @@
       "command": "tools/analytics_tool.sh",
       "cwd": "/code",
       "timeoutMs": 60000,
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": false
-      },
+      "inputSchema": {},
       "env": {
         "ANALYTICS_ACTION": "websites_list"
       }
@@ -24,15 +20,11 @@
       "cwd": "/code",
       "timeoutMs": 60000,
       "inputSchema": {
-        "type": "object",
-        "properties": {
-          "websiteId": { "type": "string", "optional": true },
-          "startAt": { "type": "number", "optional": false },
-          "endAt": { "type": "number", "optional": false },
-          "unit": { "type": "string", "optional": true },
-          "timezone": { "type": "string", "optional": true }
-        },
-        "additionalProperties": false
+        "websiteId": { "type": "string", "optional": true },
+        "startAt": { "type": "number", "optional": false },
+        "endAt": { "type": "number", "optional": false },
+        "unit": { "type": "string", "optional": true },
+        "timezone": { "type": "string", "optional": true }
       },
       "env": {
         "ANALYTICS_ACTION": "stats_get"
@@ -46,15 +38,11 @@
       "cwd": "/code",
       "timeoutMs": 60000,
       "inputSchema": {
-        "type": "object",
-        "properties": {
-          "websiteId": { "type": "string", "optional": true },
-          "startAt": { "type": "number", "optional": false },
-          "endAt": { "type": "number", "optional": false },
-          "unit": { "type": "string", "optional": true },
-          "timezone": { "type": "string", "optional": true }
-        },
-        "additionalProperties": false
+        "websiteId": { "type": "string", "optional": true },
+        "startAt": { "type": "number", "optional": false },
+        "endAt": { "type": "number", "optional": false },
+        "unit": { "type": "string", "optional": true },
+        "timezone": { "type": "string", "optional": true }
       },
       "env": {
         "ANALYTICS_ACTION": "pageviews_get"
@@ -68,21 +56,17 @@
       "cwd": "/code",
       "timeoutMs": 60000,
       "inputSchema": {
-        "type": "object",
-        "properties": {
-          "websiteId": { "type": "string", "optional": true },
-          "startAt": { "type": "number", "optional": false },
-          "endAt": { "type": "number", "optional": false },
-          "type": { "type": "string", "optional": false },
-          "url": { "type": "string", "optional": true },
-          "referrer": { "type": "string", "optional": true },
-          "title": { "type": "string", "optional": true },
-          "query": { "type": "string", "optional": true },
-          "event": { "type": "string", "optional": true },
-          "limit": { "type": "number", "optional": true },
-          "timezone": { "type": "string", "optional": true }
-        },
-        "additionalProperties": false
+        "websiteId": { "type": "string", "optional": true },
+        "startAt": { "type": "number", "optional": false },
+        "endAt": { "type": "number", "optional": false },
+        "type": { "type": "string", "optional": false },
+        "url": { "type": "string", "optional": true },
+        "referrer": { "type": "string", "optional": true },
+        "title": { "type": "string", "optional": true },
+        "query": { "type": "string", "optional": true },
+        "event": { "type": "string", "optional": true },
+        "limit": { "type": "number", "optional": true },
+        "timezone": { "type": "string", "optional": true }
       },
       "env": {
         "ANALYTICS_ACTION": "metrics_get"
@@ -96,14 +80,10 @@
       "cwd": "/code",
       "timeoutMs": 60000,
       "inputSchema": {
-        "type": "object",
-        "properties": {
-          "websiteId": { "type": "string", "optional": true },
-          "startAt": { "type": "number", "optional": false },
-          "endAt": { "type": "number", "optional": false },
-          "timezone": { "type": "string", "optional": true }
-        },
-        "additionalProperties": false
+        "websiteId": { "type": "string", "optional": true },
+        "startAt": { "type": "number", "optional": false },
+        "endAt": { "type": "number", "optional": false },
+        "timezone": { "type": "string", "optional": true }
       },
       "env": {
         "ANALYTICS_ACTION": "events_list"
@@ -117,11 +97,7 @@
       "cwd": "/code",
       "timeoutMs": 60000,
       "inputSchema": {
-        "type": "object",
-        "properties": {
-          "websiteId": { "type": "string", "optional": true }
-        },
-        "additionalProperties": false
+        "websiteId": { "type": "string", "optional": true }
       },
       "env": {
         "ANALYTICS_ACTION": "active_get"
@@ -135,17 +111,13 @@
       "cwd": "/code",
       "timeoutMs": 60000,
       "inputSchema": {
-        "type": "object",
-        "properties": {
-          "websiteId": { "type": "string", "optional": true },
-          "startAt": { "type": "number", "optional": false },
-          "endAt": { "type": "number", "optional": false },
-          "query": { "type": "string", "optional": true },
-          "page": { "type": "number", "optional": true },
-          "pageSize": { "type": "number", "optional": true },
-          "timezone": { "type": "string", "optional": true }
-        },
-        "additionalProperties": false
+        "websiteId": { "type": "string", "optional": true },
+        "startAt": { "type": "number", "optional": false },
+        "endAt": { "type": "number", "optional": false },
+        "query": { "type": "string", "optional": true },
+        "page": { "type": "number", "optional": true },
+        "pageSize": { "type": "number", "optional": true },
+        "timezone": { "type": "string", "optional": true }
       },
       "env": {
         "ANALYTICS_ACTION": "sessions_get"
@@ -159,15 +131,11 @@
       "cwd": "/code",
       "timeoutMs": 120000,
       "inputSchema": {
-        "type": "object",
-        "properties": {
-          "websiteId": { "type": "string", "optional": true },
-          "startAt": { "type": "number", "optional": false },
-          "endAt": { "type": "number", "optional": false },
-          "label": { "type": "string", "optional": true },
-          "timezone": { "type": "string", "optional": true }
-        },
-        "additionalProperties": false
+        "websiteId": { "type": "string", "optional": true },
+        "startAt": { "type": "number", "optional": false },
+        "endAt": { "type": "number", "optional": false },
+        "label": { "type": "string", "optional": true },
+        "timezone": { "type": "string", "optional": true }
       },
       "env": {
         "ANALYTICS_ACTION": "report_generate"

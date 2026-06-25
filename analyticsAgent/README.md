@@ -30,13 +30,26 @@ PostgreSQL data persists under `.ploinky/data/analyticsDB/postgres`. Database an
 
 Website tracking snippets should send browser events directly to the Umami app URL that is reachable by the website. They should not send tracking events to `analyticsAgent`.
 
+## IDE Settings Plugin
+
+`IDE-plugins/analytics-tracker/` contributes the `Analytics Tracker` settings entry in AchillesIDE. The settings modal generates an Umami browser tracking script from:
+
+- the public Umami URL, defaulting to `http://127.0.0.1:3000`;
+- the Umami website UUID copied from the dashboard;
+- optional allowed domains;
+- standard tracking or manual-events-only mode.
+
+The plugin calls `analytics_websites_list` through `/analyticsAgent/mcp` and shows the returned websites in a selector when Umami credentials are configured. Errors from the MCP call are displayed in the modal and logged with `console.error`. Tracking data still goes directly from the website browser to Umami's `/script.js` endpoint, not to MCP.
+
 ## MCP Backend
 
 Set `UMAMI_MCP_COMMAND` when the upstream server uses a different install/run command. The default command is:
 
 ```bash
-npx -y @madsnyl/umami-mcp
+node /usr/local/lib/node_modules/npm/bin/npx-cli.js -y @madsnyl/umami-mcp
 ```
+
+The absolute `npx-cli.js` path avoids the broken `/usr/local/bin/npx` shim in the current Ploinky node image.
 
 The wrapper passes these environment variables to the internal MCP process:
 

@@ -1,0 +1,14 @@
+{
+  "pluginCategory": "application",
+  "id": "analytics-tracker",
+  "component": "analytics-tracker",
+  "location": [],
+  "label": "Analytics Tracker",
+  "tooltip": "Open Analytics tracker settings",
+  "icon": "./icon.svg",
+  "presenter": "AnalyticsTracker",
+  "type": "global",
+  "autoPin": false,
+  "dependencies": [],
+  "settings": "analytics-tracker-settings"
+}

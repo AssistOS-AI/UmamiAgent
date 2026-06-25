@@ -4,6 +4,14 @@
   "readiness": {
     "protocol": "mcp"
   },
+  "routerAccess": {
+    "httpRoutes": [
+      {
+        "path": "/IDE-plugins/analytics-tracker/*",
+        "access": "guest"
+      }
+    ]
+  },
   "network": {
     "name": "analytics",
     "aliases": ["analytics-agent"]
@@ -42,7 +50,7 @@
         },
         "UMAMI_MCP_COMMAND": {
           "required": false,
-          "default": "npx -y @madsnyl/umami-mcp"
+          "default": "node /usr/local/lib/node_modules/npm/bin/npx-cli.js -y @madsnyl/umami-mcp"
         },
         "ANALYTICS_OUTPUT_DIR": {
           "required": false,
@@ -50,5 +58,15 @@
         }
       }
     }
-  }
+  },
+  "ideSettings": [
+    {
+      "key": "analytics-tracker",
+      "label": "Analytics Tracker",
+      "scope": "workspace",
+      "pluginKey": "analyticsAgent/analytics-tracker",
+      "settingsComponent": "analytics-tracker-settings",
+      "adminOnly": false
+    }
+  ]
 }
