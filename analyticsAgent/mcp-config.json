@@ -1,0 +1,177 @@
+{
+  "tools": [
+    {
+      "name": "analytics_websites_list",
+      "title": "Analytics Websites List",
+      "description": "List Umami websites visible to the configured read-only analytics credentials.",
+      "command": "tools/analytics_tool.sh",
+      "cwd": "/code",
+      "timeoutMs": 60000,
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "env": {
+        "ANALYTICS_ACTION": "websites_list"
+      }
+    },
+    {
+      "name": "analytics_stats_get",
+      "title": "Analytics Stats Get",
+      "description": "Get Umami traffic summary for a website and time range.",
+      "command": "tools/analytics_tool.sh",
+      "cwd": "/code",
+      "timeoutMs": 60000,
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "websiteId": { "type": "string", "optional": true },
+          "startAt": { "type": "number", "optional": false },
+          "endAt": { "type": "number", "optional": false },
+          "unit": { "type": "string", "optional": true },
+          "timezone": { "type": "string", "optional": true }
+        },
+        "additionalProperties": false
+      },
+      "env": {
+        "ANALYTICS_ACTION": "stats_get"
+      }
+    },
+    {
+      "name": "analytics_pageviews_get",
+      "title": "Analytics Pageviews Get",
+      "description": "Get Umami pageview and visitor time series for a website.",
+      "command": "tools/analytics_tool.sh",
+      "cwd": "/code",
+      "timeoutMs": 60000,
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "websiteId": { "type": "string", "optional": true },
+          "startAt": { "type": "number", "optional": false },
+          "endAt": { "type": "number", "optional": false },
+          "unit": { "type": "string", "optional": true },
+          "timezone": { "type": "string", "optional": true }
+        },
+        "additionalProperties": false
+      },
+      "env": {
+        "ANALYTICS_ACTION": "pageviews_get"
+      }
+    },
+    {
+      "name": "analytics_metrics_get",
+      "title": "Analytics Metrics Get",
+      "description": "Get Umami metrics such as paths, referrers, countries, devices, browsers, OS, languages, screens, and events.",
+      "command": "tools/analytics_tool.sh",
+      "cwd": "/code",
+      "timeoutMs": 60000,
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "websiteId": { "type": "string", "optional": true },
+          "startAt": { "type": "number", "optional": false },
+          "endAt": { "type": "number", "optional": false },
+          "type": { "type": "string", "optional": false },
+          "url": { "type": "string", "optional": true },
+          "referrer": { "type": "string", "optional": true },
+          "title": { "type": "string", "optional": true },
+          "query": { "type": "string", "optional": true },
+          "event": { "type": "string", "optional": true },
+          "limit": { "type": "number", "optional": true },
+          "timezone": { "type": "string", "optional": true }
+        },
+        "additionalProperties": false
+      },
+      "env": {
+        "ANALYTICS_ACTION": "metrics_get"
+      }
+    },
+    {
+      "name": "analytics_events_list",
+      "title": "Analytics Events List",
+      "description": "List Umami events for a website and time range.",
+      "command": "tools/analytics_tool.sh",
+      "cwd": "/code",
+      "timeoutMs": 60000,
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "websiteId": { "type": "string", "optional": true },
+          "startAt": { "type": "number", "optional": false },
+          "endAt": { "type": "number", "optional": false },
+          "timezone": { "type": "string", "optional": true }
+        },
+        "additionalProperties": false
+      },
+      "env": {
+        "ANALYTICS_ACTION": "events_list"
+      }
+    },
+    {
+      "name": "analytics_active_get",
+      "title": "Analytics Active Get",
+      "description": "Get currently active users for a website.",
+      "command": "tools/analytics_tool.sh",
+      "cwd": "/code",
+      "timeoutMs": 60000,
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "websiteId": { "type": "string", "optional": true }
+        },
+        "additionalProperties": false
+      },
+      "env": {
+        "ANALYTICS_ACTION": "active_get"
+      }
+    },
+    {
+      "name": "analytics_sessions_get",
+      "title": "Analytics Sessions Get",
+      "description": "Get Umami sessions for a website and time range.",
+      "command": "tools/analytics_tool.sh",
+      "cwd": "/code",
+      "timeoutMs": 60000,
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "websiteId": { "type": "string", "optional": true },
+          "startAt": { "type": "number", "optional": false },
+          "endAt": { "type": "number", "optional": false },
+          "query": { "type": "string", "optional": true },
+          "page": { "type": "number", "optional": true },
+          "pageSize": { "type": "number", "optional": true },
+          "timezone": { "type": "string", "optional": true }
+        },
+        "additionalProperties": false
+      },
+      "env": {
+        "ANALYTICS_ACTION": "sessions_get"
+      }
+    },
+    {
+      "name": "analytics_report_generate",
+      "title": "Analytics Report Generate",
+      "description": "Generate a Markdown analytics report in the workspace from read-only Umami data.",
+      "command": "tools/analytics_tool.sh",
+      "cwd": "/code",
+      "timeoutMs": 120000,
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "websiteId": { "type": "string", "optional": true },
+          "startAt": { "type": "number", "optional": false },
+          "endAt": { "type": "number", "optional": false },
+          "label": { "type": "string", "optional": true },
+          "timezone": { "type": "string", "optional": true }
+        },
+        "additionalProperties": false
+      },
+      "env": {
+        "ANALYTICS_ACTION": "report_generate"
+      }
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "container": "docker.io/assistos/ploinky-node:24-bookworm-tools",
+  "lite-sandbox": true,
+  "readiness": {
+    "protocol": "mcp"
+  },
+  "network": {
+    "name": "analytics",
+    "aliases": ["analytics-agent"]
+  },
+  "enable": ["analyticsInfra"],
+  "about": "Read-only Umami analytics agent for AchillesIDE.",
+  "endpoints": {
+    "agent-card": {
+      "name": "Analytics Agent",
+      "description": "Reads self-hosted Umami analytics through controlled MCP tools.",
+      "tags": ["analytics", "umami", "read-only"]
+    }
+  },
+  "profiles": {
+    "default": {
+      "env": {
+        "UMAMI_BASE_URL": {
+          "required": false,
+          "default": "http://analytics-umami:3000"
+        },
+        "UMAMI_USERNAME": {
+          "required": false,
+          "default": "admin"
+        },
+        "UMAMI_PASSWORD": {
+          "required": false
+        },
+        "UMAMI_TOKEN": {
+          "required": false
+        },
+        "UMAMI_DEFAULT_WEBSITE_ID": {
+          "required": false
+        },
+        "UMAMI_TIMEZONE": {
+          "required": false
+        },
+        "UMAMI_MCP_COMMAND": {
+          "required": false,
+          "default": "npx -y @madsnyl/umami-mcp"
+        },
+        "ANALYTICS_OUTPUT_DIR": {
+          "required": false,
+          "default": "/shared/deliverables/analytics"
+        }
+      }
+    }
+  }
+}
