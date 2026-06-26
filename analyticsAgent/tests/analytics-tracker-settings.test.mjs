@@ -18,7 +18,18 @@ test('analytics tracker settings are registered without guest-enabling MCP', asy
 
     assert.equal(manifest.guest, undefined);
     assert.equal(manifest.agent, 'sh /code/scripts/start-analytics-agent.sh');
-    assert.equal(manifest.profiles.default.install, 'sh /code/scripts/install-umami-mcp.sh');
+    assert.equal(manifest.container, 'docker.io/assistos/analytics-agent:umami-stack');
+    assert.equal(manifest.enable, undefined);
+    assert.deepEqual(manifest.profiles.default.ports, [
+        '127.0.0.1:0:7000',
+        '127.0.0.1:3000:3000'
+    ]);
+    assert.deepEqual(manifest.volumes, {
+        '.ploinky/data/analyticsAgent/postgres': '/var/lib/postgresql/data'
+    });
+    assert.equal(manifest.profiles.default.env.POSTGRES_PASSWORD.sharedGeneratedSecret, true);
+    assert.equal(manifest.profiles.default.env.APP_SECRET.sharedGeneratedSecret, true);
+    assert.equal(manifest.profiles.default.env.UMAMI_BASE_URL.default, 'http://127.0.0.1:3000');
     assert.equal(manifest.profiles.default.env.UMAMI_MCP_PORT.default, '7301');
     assert.equal(manifest.profiles.default.env.MCP_SECRET.sharedGeneratedSecret, true);
     assert.deepEqual(manifest.routerAccess.httpRoutes, [

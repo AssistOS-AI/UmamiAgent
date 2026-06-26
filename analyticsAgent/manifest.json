@@ -1,5 +1,5 @@
 {
-  "container": "docker.io/assistos/ploinky-node:24-bookworm-tools",
+  "container": "docker.io/assistos/analytics-agent:umami-stack",
   "lite-sandbox": true,
   "agent": "sh /code/scripts/start-analytics-agent.sh",
   "readiness": {
@@ -17,7 +17,6 @@
     "name": "analytics",
     "aliases": ["analytics-agent"]
   },
-  "enable": ["analyticsInfra"],
   "about": "Read-only Umami analytics agent for AchillesIDE.",
   "endpoints": {
     "agent-card": {
@@ -26,13 +25,37 @@
       "tags": ["analytics", "umami", "read-only"]
     }
   },
+  "volumes": {
+    ".ploinky/data/analyticsAgent/postgres": "/var/lib/postgresql/data"
+  },
   "profiles": {
     "default": {
-      "install": "sh /code/scripts/install-umami-mcp.sh",
+      "ports": [
+        "127.0.0.1:0:7000",
+        "127.0.0.1:3000:3000"
+      ],
       "env": {
+        "POSTGRES_DB": {
+          "required": false,
+          "default": "umami"
+        },
+        "POSTGRES_USER": {
+          "required": false,
+          "default": "umami"
+        },
+        "POSTGRES_PASSWORD": {
+          "name": "UMAMI_POSTGRES_PASSWORD",
+          "required": true,
+          "sharedGeneratedSecret": true
+        },
+        "APP_SECRET": {
+          "name": "UMAMI_APP_SECRET",
+          "required": true,
+          "sharedGeneratedSecret": true
+        },
         "UMAMI_BASE_URL": {
           "required": false,
-          "default": "http://analytics-umami:3000"
+          "default": "http://127.0.0.1:3000"
         },
         "UMAMI_USERNAME": {
           "required": false,

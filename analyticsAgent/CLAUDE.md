@@ -5,11 +5,13 @@
 ## Runtime
 
 - The Ploinky public surface is the standard AgentServer on `/mcp`.
-- `analyticsAgent` depends on `analyticsInfra`, which depends on `analyticsDB`.
-- `analyticsInfra` runs `docker.umami.is/umami-software/umami:postgresql-latest`.
-- `analyticsDB` runs `postgres:16-alpine`.
+- `analyticsAgent` is the only Ploinky agent in the analytics stack.
+- The runtime image is `docker.io/assistos/analytics-agent:umami-stack`.
+- The image layers PostgreSQL and built `MadsNyl/umami-mcp` onto `docker.umami.is/umami-software/umami:postgresql-latest`.
+- `scripts/start-analytics-agent.sh` supervises PostgreSQL, Umami, the internal Umami MCP server, and Ploinky AgentServer.
 - The Umami dashboard is host-local by default at `http://127.0.0.1:3000`.
-- The internal Umami API URL is `http://analytics-umami:3000`.
+- The internal Umami API URL is `http://127.0.0.1:3000`.
+- PostgreSQL data persists under `.ploinky/data/analyticsAgent/postgres`.
 - The MCP implementation runs `MadsNyl/umami-mcp` internally as an HTTP MCP server on `127.0.0.1:${UMAMI_MCP_PORT:-7301}`; do not expose that upstream MCP server directly to Ploinky.
 - `IDE-plugins/analytics-tracker/` registers the AchillesIDE `Analytics Tracker` settings modal and generates browser snippets for Umami's public `/script.js`.
 
@@ -25,6 +27,6 @@
 
 ## Local Setup
 
-Starting `analyticsAgent` should enable `analyticsInfra`; starting `analyticsInfra` should enable `analyticsDB`. Ploinky generates the shared PostgreSQL and Umami app secrets.
+Starting `analyticsAgent` should not enable separate analytics infrastructure agents. Ploinky generates the PostgreSQL and Umami app secrets for this single agent.
 
 Default Umami login from upstream is `admin` / `umami`. Change it after first login, then configure `UMAMI_PASSWORD` for the read-only MCP adapter OAuth bootstrap.

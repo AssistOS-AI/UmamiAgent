@@ -2,4 +2,4 @@
 
 | ID | Title | Status | Summary |
 | --- | --- | --- | --- |
-| DS01 | Analytics Agent | implemented | Defines the read-only Umami analytics agent, its Ploinky-managed Umami dependencies, MCP surface, and security boundaries. |
+| DS01 | Analytics Agent | implemented | Defines the single-container read-only Umami analytics agent, its MCP surface, embedded Umami stack, and security boundaries. |

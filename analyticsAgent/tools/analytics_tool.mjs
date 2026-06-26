@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
-const DEFAULT_BASE_URL = 'http://analytics-umami:3000';
+const DEFAULT_BASE_URL = 'http://127.0.0.1:3000';
 const DEFAULT_OUTPUT_DIR = '/shared/deliverables/analytics';
 const DEFAULT_MCP_PORT = 7301;
 const DEFAULT_OAUTH_CLIENT_ID = 'analytics-agent';
