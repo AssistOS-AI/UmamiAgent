@@ -165,6 +165,19 @@ function buildScriptCode({ umamiUrl, websiteId }) {
     return lines.join('\n');
 }
 
+function buildDashboardUrl(origin = window.location?.origin) {
+    try {
+        const parsed = new URL(normalizeString(origin, window.location?.origin));
+        parsed.hostname = 'analyticsAgent.localhost';
+        parsed.pathname = '/';
+        parsed.search = '';
+        parsed.hash = '';
+        return parsed.toString().replace(/\/$/, '');
+    } catch {
+        return 'http://analyticsAgent.localhost:8080';
+    }
+}
+
 export class AnalyticsTrackerSettingsSettings {
     constructor(element, invalidate) {
         this.element = element;
@@ -318,7 +331,7 @@ export class AnalyticsTrackerSettingsSettings {
     }
 
     openDashboard() {
-        const dashboardUrl = normalizeUrl(this.state.umamiUrl, DEFAULTS.umamiUrl);
+        const dashboardUrl = buildDashboardUrl();
         window.open(dashboardUrl, '_blank', 'noopener');
         this.state.status = 'Dashboard opened in a new tab.';
         this.state.statusType = '';
@@ -396,6 +409,10 @@ export class AnalyticsTrackerSettingsSettings {
         assistOS.UI.closeModal(this.element, null);
     }
 }
+
+export {
+    buildDashboardUrl
+};
 
 export class AnalyticsTrackerSettings {
     constructor(...args) {

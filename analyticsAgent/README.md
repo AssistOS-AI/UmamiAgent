@@ -13,10 +13,16 @@
 
 `analyticsAgent` is the only Ploinky agent in the analytics stack. Its startup supervisor initializes and starts PostgreSQL, starts the Umami app, starts the internal Umami MCP adapter, and then starts Ploinky AgentServer.
 
-The dashboard is bound to local host by default:
+The Umami app listens inside the agent container at:
 
 ```text
 http://127.0.0.1:3000
+```
+
+Ploinky exposes the dashboard through the router at:
+
+```text
+http://analyticsAgent.localhost:8080/
 ```
 
 Inside the container, `analyticsAgent` calls Umami at:

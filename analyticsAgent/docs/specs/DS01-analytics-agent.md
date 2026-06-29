@@ -16,7 +16,7 @@ The agent does not start host-side Docker Compose and does not depend on separat
 
 `scripts/start-analytics-agent.sh` is the single-container supervisor. It initializes PostgreSQL under `/var/lib/postgresql/data` when needed, starts PostgreSQL on `127.0.0.1:5432`, ensures the configured `POSTGRES_DB` exists, runs Umami's database check and tracker update, starts Umami on `0.0.0.0:${UMAMI_APP_PORT:-3000}`, starts `MadsNyl/umami-mcp` on `127.0.0.1:${UMAMI_MCP_PORT:-7301}`, and then starts Ploinky AgentServer on container port `7000`.
 
-The Umami dashboard is local-only by default through `127.0.0.1:3000`. Ploinky MCP is published through a dynamic localhost host port mapped to container port `7000`, so the router continues to own `/analyticsAgent/mcp`. The agent reaches the Umami API through `UMAMI_BASE_URL`, defaulting to `http://127.0.0.1:3000`.
+The Umami dashboard listens inside the container on `127.0.0.1:3000` and is declared as the profile `server`, so Ploinky exposes it through the router at `http://analyticsAgent.localhost:8080/` without reserving host port `3000`. Ploinky MCP is published through a dynamic localhost host port mapped to container port `7000`, so the router continues to own `/analyticsAgent/mcp`. The agent reaches the Umami API through `UMAMI_BASE_URL`, defaulting to `http://127.0.0.1:3000`.
 
 `MadsNyl/umami-mcp` is an internal backend adapter. Ploinky users and agents never call it directly. `analytics_tool.mjs` authenticates to the internal MadsNyl server through its OAuth flow, lists available upstream tools, maps each public Ploinky tool to a compatible upstream tool, validates input, and returns redacted output.
 

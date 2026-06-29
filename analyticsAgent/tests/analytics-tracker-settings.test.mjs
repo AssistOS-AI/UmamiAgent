@@ -20,9 +20,9 @@ test('analytics tracker settings are registered without guest-enabling MCP', asy
     assert.equal(manifest.agent, 'sh /code/scripts/start-analytics-agent.sh');
     assert.equal(manifest.container, 'docker.io/assistos/analytics-agent:umami-stack');
     assert.equal(manifest.enable, undefined);
+    assert.equal(manifest.profiles.default.server, 'http://127.0.0.1:3000');
     assert.deepEqual(manifest.profiles.default.ports, [
-        '127.0.0.1:0:7000',
-        '127.0.0.1:3000:3000'
+        '127.0.0.1:0:7000'
     ]);
     assert.deepEqual(manifest.volumes, {
         '.ploinky/data/analyticsAgent/postgres': '/var/lib/postgresql/data'
@@ -82,6 +82,8 @@ test('analytics tracker settings generate Umami script snippets', async () => {
     const markup = await fs.readFile(SETTINGS_HTML, 'utf8');
 
     assert.match(source, /\/script\.js/);
+    assert.match(source, /analyticsAgent\.localhost/);
+    assert.ok(!source.includes('const dashboardUrl = normalizeUrl(this.state.umamiUrl'));
     assert.match(source, /data-website-id/);
     assert.ok(!source.includes('data-domains'));
     assert.ok(!source.includes('data-auto-track'));
