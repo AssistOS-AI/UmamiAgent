@@ -4,9 +4,9 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 
 const DEFAULT_BASE_URL = 'http://127.0.0.1:3000';
-const DEFAULT_OUTPUT_DIR = '/shared/deliverables/analytics';
+const DEFAULT_OUTPUT_DIR = '/shared/deliverables/umami';
 const DEFAULT_MCP_PORT = 7301;
-const DEFAULT_OAUTH_CLIENT_ID = 'analytics-agent';
+const DEFAULT_OAUTH_CLIENT_ID = 'umami-agent';
 const TOKEN_CACHE_PATH = '/tmp/umami-mcp-access-token.json';
 
 const ACTIONS = {
@@ -58,8 +58,8 @@ function writeJson(value) {
 }
 
 function debug(...args) {
-    if (process.env.ANALYTICS_DEBUG === 'true') {
-        console.error('[analytics_tool]', ...args.map(redact));
+    if (process.env.UMAMI_DEBUG === 'true') {
+        console.error('[umami_tool]', ...args.map(redact));
     }
 }
 
@@ -126,7 +126,7 @@ function defaultTimezone() {
 
 function validateActionInput(action, rawInput) {
     const spec = ACTIONS[action];
-    if (!spec) throw new Error(`Unsupported analytics action: ${action}`);
+    if (!spec) throw new Error(`Unsupported umami action: ${action}`);
     const input = rawInput && typeof rawInput === 'object' && !Array.isArray(rawInput) ? rawInput : {};
     const allowed = new Set([...spec.required, ...spec.optional]);
     const unknown = Object.keys(input).filter((key) => !allowed.has(key));
@@ -314,7 +314,7 @@ class HttpMcpClient {
 
     nextId() {
         this.messageId += 1;
-        return `analytics-${this.messageId}`;
+        return `umami-${this.messageId}`;
     }
 
     async start() {
@@ -367,7 +367,7 @@ class HttpMcpClient {
             protocolVersion: this.protocolVersion,
             capabilities: {},
             clientInfo: {
-                name: 'achilles-analytics-agent',
+                name: 'achilles-umami-agent',
                 version: '0.1.0'
             }
         });
@@ -495,7 +495,7 @@ async function generateReport(client, rawInput) {
     const countries = await callUmamiMcp(client, 'metrics_get', { ...input, type: 'country', limit: 25 });
 
     const lines = [
-        `# Analytics Report - ${label}`,
+        `# Umami Report - ${label}`,
         '',
         `- Website: ${websiteId}`,
         `- Start: ${new Date(input.startAt).toISOString()}`,
@@ -528,7 +528,7 @@ async function generateReport(client, rawInput) {
         ''
     ];
 
-    const outputDir = normalizeString(process.env.ANALYTICS_OUTPUT_DIR) || DEFAULT_OUTPUT_DIR;
+    const outputDir = normalizeString(process.env.UMAMI_OUTPUT_DIR) || DEFAULT_OUTPUT_DIR;
     await fs.mkdir(outputDir, { recursive: true });
     const safeLabel = label.replace(/[^a-zA-Z0-9_.-]+/g, '-').replace(/^-+|-+$/g, '') || 'report';
     const filePath = path.join(outputDir, `${safeLabel}.md`);
@@ -541,7 +541,7 @@ async function generateReport(client, rawInput) {
 }
 
 async function main() {
-    const action = normalizeString(process.env.ANALYTICS_ACTION || process.env.TOOL_NAME);
+    const action = normalizeString(process.env.UMAMI_ACTION || process.env.TOOL_NAME);
     const client = new HttpMcpClient();
     const clientStart = client.start();
     const envelope = safeJson(await readStdin(), {});

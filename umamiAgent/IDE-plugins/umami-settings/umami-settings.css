@@ -1,51 +1,51 @@
-analytics-tracker-settings .analytics-settings-modal {
+umami-settings .umami-settings-modal {
     min-width: min(760px, 94vw);
 }
 
-analytics-tracker-settings .analytics-settings-body {
+umami-settings .umami-settings-body {
     display: flex;
     flex-direction: column;
     gap: 14px;
 }
 
-analytics-tracker-settings .analytics-settings-grid {
+umami-settings .umami-settings-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(220px, 1fr));
     gap: 12px;
 }
 
-analytics-tracker-settings .analytics-settings-grid .form-item,
-analytics-tracker-settings .analytics-snippet-wrap {
+umami-settings .umami-settings-grid .form-item,
+umami-settings .umami-snippet-wrap {
     margin: 0;
     display: flex;
     flex-direction: column;
     gap: 6px;
 }
 
-analytics-tracker-settings .analytics-settings-actions {
+umami-settings .umami-settings-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
 }
 
-analytics-tracker-settings #analyticsScriptSnippet {
+umami-settings #umamiScriptSnippet {
     min-height: 150px;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     white-space: pre;
 }
 
-analytics-tracker-settings .analytics-settings-status {
+umami-settings .umami-settings-status {
     min-height: 1.2rem;
     color: var(--text-soft);
     font-size: 0.92rem;
 }
 
-analytics-tracker-settings .analytics-settings-status.error {
+umami-settings .umami-settings-status.error {
     color: var(--file-exp-error);
 }
 
 @media (max-width: 760px) {
-    analytics-tracker-settings .analytics-settings-grid {
+    umami-settings .umami-settings-grid {
         grid-template-columns: 1fr;
     }
 }

@@ -1,0 +1,37 @@
+<div class="umami-settings-modal">
+    <div class="modal-header">
+        <div class="modal-title">Umami Settings</div>
+        <div class="close" data-local-action="closeModal" aria-label="Close">
+            <img class="close-icon" src="./assets/icons/x-mark.svg" alt="close">
+        </div>
+    </div>
+
+    <div class="modal-body umami-settings-body">
+        <div class="umami-settings-grid">
+            <label class="form-item">
+                <span class="form-label">Umami Public URL</span>
+                <input id="umamiUrl" class="form-input" type="url" placeholder="http://127.0.0.1:3000" spellcheck="false">
+            </label>
+
+            <label class="form-item">
+                <span class="form-label">Website</span>
+                <select id="umamiWebsiteSelect" class="form-input">
+                    <option value="">Load websites from Umami</option>
+                </select>
+            </label>
+
+        </div>
+
+        <div class="umami-settings-actions">
+            <button type="button" class="general-button" data-local-action="openDashboard">Open Dashboard</button>
+            <button type="button" id="umamiCopyButton" class="general-button" data-local-action="copyScriptCode">Copy script code</button>
+        </div>
+
+        <label class="form-item umami-snippet-wrap">
+            <span class="form-label">Generated script snippet</span>
+            <textarea id="umamiScriptSnippet" class="form-input" rows="7" spellcheck="false"></textarea>
+        </label>
+
+        <div id="umamiSettingsStatus" class="umami-settings-status" role="status" aria-live="polite"></div>
+    </div>
+</div>

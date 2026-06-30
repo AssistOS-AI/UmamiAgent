@@ -1,36 +1,39 @@
 {
-  "container": "docker.io/assistos/analytics-agent:umami-stack",
+  "container": "docker.io/assistos/umami-agent:umami-stack",
   "lite-sandbox": true,
-  "agent": "sh /code/scripts/start-analytics-agent.sh",
+  "agent": "sh /code/scripts/start-umami-agent.sh",
   "readiness": {
     "protocol": "mcp"
   },
   "routerAccess": {
     "httpRoutes": [
       {
-        "path": "/IDE-plugins/analytics-tracker/*",
+        "path": "/IDE-plugins/umami-settings/*",
         "access": "guest"
       }
     ]
   },
   "network": {
-    "name": "analytics",
-    "aliases": ["analytics-agent"]
+    "name": "umami",
+    "aliases": ["umami-agent"]
   },
-  "about": "Read-only Umami analytics agent for AchillesIDE.",
+  "about": "Read-only Umami agent for AchillesIDE.",
   "endpoints": {
     "agent-card": {
-      "name": "Analytics Agent",
-      "description": "Reads self-hosted Umami analytics through controlled MCP tools.",
-      "tags": ["analytics", "umami", "read-only"]
+      "name": "Umami Agent",
+      "description": "Reads self-hosted Umami data through controlled MCP tools.",
+      "tags": ["umami", "read-only"]
     }
   },
   "volumes": {
-    ".ploinky/data/analyticsAgent/postgres": "/var/lib/postgresql/data"
+    ".ploinky/data/umamiAgent/postgres": "/var/lib/postgresql/data"
   },
   "profiles": {
     "default": {
       "server": "http://127.0.0.1:3000",
+      "ports": [
+        "127.0.0.1:0:7000"
+      ],
       "env": {
         "POSTGRES_DB": {
           "required": false,
@@ -82,7 +85,7 @@
         },
         "OAUTH_CLIENT_ID": {
           "required": false,
-          "default": "analytics-agent"
+          "default": "umami-agent"
         },
         "OAUTH_REDIRECT_URI": {
           "required": false
@@ -91,20 +94,20 @@
           "required": false,
           "default": "/tmp/umami-mcp/sessions.db"
         },
-        "ANALYTICS_OUTPUT_DIR": {
+        "UMAMI_OUTPUT_DIR": {
           "required": false,
-          "default": "/shared/deliverables/analytics"
+          "default": "/shared/deliverables/umami"
         }
       }
     }
   },
   "ideSettings": [
     {
-      "key": "analytics-tracker",
-      "label": "Analytics Tracker",
+      "key": "umami-settings",
+      "label": "Umami Settings",
       "scope": "workspace",
-      "pluginKey": "analyticsAgent/analytics-tracker",
-      "settingsComponent": "analytics-tracker-settings",
+      "pluginKey": "umamiAgent/umami-settings",
+      "settingsComponent": "umami-settings",
       "adminOnly": false
     }
   ]

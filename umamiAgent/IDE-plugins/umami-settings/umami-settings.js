@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'analytics-tracker-settings:v1';
+const STORAGE_KEY = 'umami-settings:v1';
 const DEFAULTS = Object.freeze({
     umamiUrl: 'http://127.0.0.1:3000',
     websiteId: ''
@@ -65,7 +65,7 @@ function decodeToolPayload(result) {
     const parsed = tryParseJson(text);
     if (parsed && typeof parsed === 'object') {
         if (parsed.ok === false) {
-            throw new Error(normalizeString(parsed.error, 'Analytics tool failed.'));
+            throw new Error(normalizeString(parsed.error, 'Umami tool failed.'));
         }
         return parsed;
     }
@@ -76,10 +76,10 @@ function decodeToolPayload(result) {
     }
 
     if (!normalized) {
-        throw new Error('Analytics tool returned an empty response.');
+        throw new Error('Umami tool returned an empty response.');
     }
 
-    throw new Error(`Analytics tool returned a non-JSON response: ${normalized}`);
+    throw new Error(`Umami tool returned a non-JSON response: ${normalized}`);
 }
 
 function readStoredSettings() {
@@ -168,17 +168,17 @@ function buildScriptCode({ umamiUrl, websiteId }) {
 function buildDashboardUrl(origin = window.location?.origin) {
     try {
         const parsed = new URL(normalizeString(origin, window.location?.origin));
-        parsed.hostname = 'analyticsAgent.localhost';
+        parsed.hostname = 'umamiAgent.localhost';
         parsed.pathname = '/';
         parsed.search = '';
         parsed.hash = '';
         return parsed.toString().replace(/\/$/, '');
     } catch {
-        return 'http://analyticsAgent.localhost:8080';
+        return 'http://umamiAgent.localhost:8080';
     }
 }
 
-export class AnalyticsTrackerSettingsSettings {
+export class UmamiSettingsSettings {
     constructor(element, invalidate) {
         this.element = element;
         this.invalidate = invalidate;
@@ -210,18 +210,18 @@ export class AnalyticsTrackerSettingsSettings {
     }
 
     cacheElements() {
-        this.umamiUrlInput = this.element.querySelector('#analyticsUmamiUrl');
-        this.websiteSelect = this.element.querySelector('#analyticsWebsiteSelect');
-        this.copyButton = this.element.querySelector('#analyticsCopyButton');
-        this.snippetArea = this.element.querySelector('#analyticsScriptSnippet');
-        this.statusElement = this.element.querySelector('#analyticsSettingsStatus');
+        this.umamiUrlInput = this.element.querySelector('#umamiUrl');
+        this.websiteSelect = this.element.querySelector('#umamiWebsiteSelect');
+        this.copyButton = this.element.querySelector('#umamiCopyButton');
+        this.snippetArea = this.element.querySelector('#umamiScriptSnippet');
+        this.statusElement = this.element.querySelector('#umamiSettingsStatus');
     }
 
     bindEvents() {
-        if (this.element.dataset.analyticsSettingsBound === 'true') {
+        if (this.element.dataset.umamiSettingsBound === 'true') {
             return;
         }
-        this.element.dataset.analyticsSettingsBound = 'true';
+        this.element.dataset.umamiSettingsBound = 'true';
 
         this.umamiUrlInput?.addEventListener('input', (event) => {
             this.state.umamiUrl = String(event.target?.value || '');
@@ -258,7 +258,7 @@ export class AnalyticsTrackerSettingsSettings {
             if (!module || typeof module.createAgentClient !== 'function') {
                 throw new Error('MCP browser client module is unavailable.');
             }
-            this.mcpClient = module.createAgentClient('/analyticsAgent/mcp');
+            this.mcpClient = module.createAgentClient('/umamiAgent/mcp');
             return this.mcpClient;
         })();
 
@@ -347,7 +347,7 @@ export class AnalyticsTrackerSettingsSettings {
 
         try {
             const client = await this.ensureMcpClient();
-            const toolResult = await client.callTool('analytics_websites_list', {});
+            const toolResult = await client.callTool('umami_websites_list', {});
             const payload = decodeToolPayload(toolResult);
             const websites = normalizeWebsiteList(payload);
             this.state.websites = websites;
@@ -365,7 +365,7 @@ export class AnalyticsTrackerSettingsSettings {
             this.state.websites = [];
             this.state.status = formatErrorMessage(error, 'Failed to load websites.');
             this.state.statusType = 'error';
-            console.error('[analytics-tracker-settings] Failed to load websites through MCP', error);
+            console.error('[umami-settings] Failed to load websites through MCP', error);
             this.renderDerived();
         }
     }
@@ -414,8 +414,8 @@ export {
     buildDashboardUrl
 };
 
-export class AnalyticsTrackerSettings {
+export class UmamiSettings {
     constructor(...args) {
-        return new AnalyticsTrackerSettingsSettings(...args);
+        return new UmamiSettingsSettings(...args);
     }
 }

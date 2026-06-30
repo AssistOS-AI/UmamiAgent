@@ -6,26 +6,26 @@ import test from 'node:test';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MANIFEST = path.join(ROOT, 'manifest.json');
-const CONFIG = path.join(ROOT, 'IDE-plugins', 'analytics-tracker', 'config.json');
+const CONFIG = path.join(ROOT, 'IDE-plugins', 'umami-settings', 'config.json');
 const MCP_CONFIG = path.join(ROOT, 'mcp-config.json');
-const TOOL_JS = path.join(ROOT, 'tools', 'analytics_tool.mjs');
-const SETTINGS_JS = path.join(ROOT, 'IDE-plugins', 'analytics-tracker', 'analytics-tracker-settings', 'analytics-tracker-settings.js');
-const SETTINGS_HTML = path.join(ROOT, 'IDE-plugins', 'analytics-tracker', 'analytics-tracker-settings', 'analytics-tracker-settings.html');
+const TOOL_JS = path.join(ROOT, 'tools', 'umami_tool.mjs');
+const SETTINGS_JS = path.join(ROOT, 'IDE-plugins', 'umami-settings', 'umami-settings.js');
+const SETTINGS_HTML = path.join(ROOT, 'IDE-plugins', 'umami-settings', 'umami-settings.html');
 
-test('analytics tracker settings are registered without guest-enabling MCP', async () => {
+test('umami settings are registered without guest-enabling MCP', async () => {
     const manifest = JSON.parse(await fs.readFile(MANIFEST, 'utf8'));
     const config = JSON.parse(await fs.readFile(CONFIG, 'utf8'));
 
     assert.equal(manifest.guest, undefined);
-    assert.equal(manifest.agent, 'sh /code/scripts/start-analytics-agent.sh');
-    assert.equal(manifest.container, 'docker.io/assistos/analytics-agent:umami-stack');
+    assert.equal(manifest.agent, 'sh /code/scripts/start-umami-agent.sh');
+    assert.equal(manifest.container, 'docker.io/assistos/umami-agent:umami-stack');
     assert.equal(manifest.enable, undefined);
     assert.equal(manifest.profiles.default.server, 'http://127.0.0.1:3000');
     assert.deepEqual(manifest.profiles.default.ports, [
         '127.0.0.1:0:7000'
     ]);
     assert.deepEqual(manifest.volumes, {
-        '.ploinky/data/analyticsAgent/postgres': '/var/lib/postgresql/data'
+        '.ploinky/data/umamiAgent/postgres': '/var/lib/postgresql/data'
     });
     assert.equal(manifest.profiles.default.env.POSTGRES_PASSWORD.sharedGeneratedSecret, true);
     assert.equal(manifest.profiles.default.env.APP_SECRET.sharedGeneratedSecret, true);
@@ -34,26 +34,26 @@ test('analytics tracker settings are registered without guest-enabling MCP', asy
     assert.equal(manifest.profiles.default.env.MCP_SECRET.sharedGeneratedSecret, true);
     assert.deepEqual(manifest.routerAccess.httpRoutes, [
         {
-            path: '/IDE-plugins/analytics-tracker/*',
+            path: '/IDE-plugins/umami-settings/*',
             access: 'guest'
         }
     ]);
     assert.deepEqual(manifest.ideSettings, [
         {
-            key: 'analytics-tracker',
-            label: 'Analytics Tracker',
+            key: 'umami-settings',
+            label: 'Umami Settings',
             scope: 'workspace',
-            pluginKey: 'analyticsAgent/analytics-tracker',
-            settingsComponent: 'analytics-tracker-settings',
+            pluginKey: 'umamiAgent/umami-settings',
+            settingsComponent: 'umami-settings',
             adminOnly: false
         }
     ]);
     assert.equal(config.pluginCategory, 'application');
-    assert.equal(config.id, 'analytics-tracker');
-    assert.equal(config.settings, 'analytics-tracker-settings');
+    assert.equal(config.id, 'umami-settings');
+    assert.equal(config.settings, 'umami-settings');
 });
 
-test('analytics tool uses local HTTP MCP and OAuth bootstrap for MadsNyl', async () => {
+test('umami tool uses local HTTP MCP and OAuth bootstrap for MadsNyl', async () => {
     const source = await fs.readFile(TOOL_JS, 'utf8');
     assert.match(source, /class HttpMcpClient/);
     assert.match(source, /bootstrapOAuthToken/);
@@ -66,10 +66,10 @@ test('analytics tool uses local HTTP MCP and OAuth bootstrap for MadsNyl', async
     assert.ok(!source.includes('StdioMcpClient'));
 });
 
-test('analytics MCP schemas use AgentServer property-map shape', async () => {
+test('umami MCP schemas use AgentServer property-map shape', async () => {
     const config = JSON.parse(await fs.readFile(MCP_CONFIG, 'utf8'));
-    const websitesList = config.tools.find((tool) => tool.name === 'analytics_websites_list');
-    const statsGet = config.tools.find((tool) => tool.name === 'analytics_stats_get');
+    const websitesList = config.tools.find((tool) => tool.name === 'umami_websites_list');
+    const statsGet = config.tools.find((tool) => tool.name === 'umami_stats_get');
 
     assert.deepEqual(websitesList.inputSchema, {});
     assert.ok(!Object.hasOwn(statsGet.inputSchema, 'type'));
@@ -77,12 +77,12 @@ test('analytics MCP schemas use AgentServer property-map shape', async () => {
     assert.deepEqual(statsGet.inputSchema.startAt, { type: 'number', optional: false });
 });
 
-test('analytics tracker settings generate Umami script snippets', async () => {
+test('umami settings generate Umami script snippets', async () => {
     const source = await fs.readFile(SETTINGS_JS, 'utf8');
     const markup = await fs.readFile(SETTINGS_HTML, 'utf8');
 
     assert.match(source, /\/script\.js/);
-    assert.match(source, /analyticsAgent\.localhost/);
+    assert.match(source, /umamiAgent\.localhost/);
     assert.ok(!source.includes('const dashboardUrl = normalizeUrl(this.state.umamiUrl'));
     assert.match(source, /data-website-id/);
     assert.ok(!source.includes('data-domains'));
@@ -92,17 +92,17 @@ test('analytics tracker settings generate Umami script snippets', async () => {
     assert.match(source, /UUID_PATTERN/);
     assert.match(source, /website_id/);
     assert.match(source, /result\?\.data/);
-    assert.match(source, /analyticsWebsiteSelect/);
+    assert.match(source, /umamiWebsiteSelect/);
     assert.match(source, /decodeToolPayload/);
     assert.match(source, /MCP error/);
     assert.match(source, /console\.error/);
-    assert.match(source, /createAgentClient\('\/analyticsAgent\/mcp'\)/);
-    assert.match(source, /analytics_websites_list/);
-    assert.ok(!source.includes('/analyticsAgent/mcp/script'));
-    assert.match(markup, /id="analyticsWebsiteSelect"/);
-    assert.ok(!source.includes('analyticsLoadWebsitesButton'));
+    assert.match(source, /createAgentClient\('\/umamiAgent\/mcp'\)/);
+    assert.match(source, /umami_websites_list/);
+    assert.ok(!source.includes('/umamiAgent/mcp/script'));
+    assert.match(markup, /id="umamiWebsiteSelect"/);
+    assert.ok(!source.includes('umamiLoadWebsitesButton'));
     assert.ok(!markup.includes('Refresh Websites'));
-    assert.ok(!markup.includes('analyticsLoadWebsitesButton'));
+    assert.ok(!markup.includes('umamiLoadWebsitesButton'));
     assert.ok(!markup.includes('Website UUID fallback'));
     assert.match(markup, /data-local-action="copyScriptCode"/);
 });

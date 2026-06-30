@@ -1,22 +1,22 @@
 {
   "tools": [
     {
-      "name": "analytics_websites_list",
-      "title": "Analytics Websites List",
-      "description": "List Umami websites visible to the configured read-only analytics credentials.",
-      "command": "tools/analytics_tool.sh",
+      "name": "umami_websites_list",
+      "title": "Umami Websites List",
+      "description": "List Umami websites visible to the configured read-only Umami credentials.",
+      "command": "tools/umami_tool.sh",
       "cwd": "/code",
       "timeoutMs": 60000,
       "inputSchema": {},
       "env": {
-        "ANALYTICS_ACTION": "websites_list"
+        "UMAMI_ACTION": "websites_list"
       }
     },
     {
-      "name": "analytics_stats_get",
-      "title": "Analytics Stats Get",
+      "name": "umami_stats_get",
+      "title": "Umami Stats Get",
       "description": "Get Umami traffic summary for a website and time range.",
-      "command": "tools/analytics_tool.sh",
+      "command": "tools/umami_tool.sh",
       "cwd": "/code",
       "timeoutMs": 60000,
       "inputSchema": {
@@ -27,14 +27,14 @@
         "timezone": { "type": "string", "optional": true }
       },
       "env": {
-        "ANALYTICS_ACTION": "stats_get"
+        "UMAMI_ACTION": "stats_get"
       }
     },
     {
-      "name": "analytics_pageviews_get",
-      "title": "Analytics Pageviews Get",
+      "name": "umami_pageviews_get",
+      "title": "Umami Pageviews Get",
       "description": "Get Umami pageview and visitor time series for a website.",
-      "command": "tools/analytics_tool.sh",
+      "command": "tools/umami_tool.sh",
       "cwd": "/code",
       "timeoutMs": 60000,
       "inputSchema": {
@@ -45,14 +45,14 @@
         "timezone": { "type": "string", "optional": true }
       },
       "env": {
-        "ANALYTICS_ACTION": "pageviews_get"
+        "UMAMI_ACTION": "pageviews_get"
       }
     },
     {
-      "name": "analytics_metrics_get",
-      "title": "Analytics Metrics Get",
+      "name": "umami_metrics_get",
+      "title": "Umami Metrics Get",
       "description": "Get Umami metrics such as paths, referrers, countries, devices, browsers, OS, languages, screens, and events.",
-      "command": "tools/analytics_tool.sh",
+      "command": "tools/umami_tool.sh",
       "cwd": "/code",
       "timeoutMs": 60000,
       "inputSchema": {
@@ -69,14 +69,14 @@
         "timezone": { "type": "string", "optional": true }
       },
       "env": {
-        "ANALYTICS_ACTION": "metrics_get"
+        "UMAMI_ACTION": "metrics_get"
       }
     },
     {
-      "name": "analytics_events_list",
-      "title": "Analytics Events List",
+      "name": "umami_events_list",
+      "title": "Umami Events List",
       "description": "List Umami events for a website and time range.",
-      "command": "tools/analytics_tool.sh",
+      "command": "tools/umami_tool.sh",
       "cwd": "/code",
       "timeoutMs": 60000,
       "inputSchema": {
@@ -86,28 +86,28 @@
         "timezone": { "type": "string", "optional": true }
       },
       "env": {
-        "ANALYTICS_ACTION": "events_list"
+        "UMAMI_ACTION": "events_list"
       }
     },
     {
-      "name": "analytics_active_get",
-      "title": "Analytics Active Get",
+      "name": "umami_active_get",
+      "title": "Umami Active Get",
       "description": "Get currently active users for a website.",
-      "command": "tools/analytics_tool.sh",
+      "command": "tools/umami_tool.sh",
       "cwd": "/code",
       "timeoutMs": 60000,
       "inputSchema": {
         "websiteId": { "type": "string", "optional": true }
       },
       "env": {
-        "ANALYTICS_ACTION": "active_get"
+        "UMAMI_ACTION": "active_get"
       }
     },
     {
-      "name": "analytics_sessions_get",
-      "title": "Analytics Sessions Get",
+      "name": "umami_sessions_get",
+      "title": "Umami Sessions Get",
       "description": "Get Umami sessions for a website and time range.",
-      "command": "tools/analytics_tool.sh",
+      "command": "tools/umami_tool.sh",
       "cwd": "/code",
       "timeoutMs": 60000,
       "inputSchema": {
@@ -120,14 +120,14 @@
         "timezone": { "type": "string", "optional": true }
       },
       "env": {
-        "ANALYTICS_ACTION": "sessions_get"
+        "UMAMI_ACTION": "sessions_get"
       }
     },
     {
-      "name": "analytics_report_generate",
-      "title": "Analytics Report Generate",
-      "description": "Generate a Markdown analytics report in the workspace from read-only Umami data.",
-      "command": "tools/analytics_tool.sh",
+      "name": "umami_report_generate",
+      "title": "Umami Report Generate",
+      "description": "Generate a Markdown Umami report in the workspace from read-only Umami data.",
+      "command": "tools/umami_tool.sh",
       "cwd": "/code",
       "timeoutMs": 120000,
       "inputSchema": {
@@ -138,7 +138,7 @@
         "timezone": { "type": "string", "optional": true }
       },
       "env": {
-        "ANALYTICS_ACTION": "report_generate"
+        "UMAMI_ACTION": "report_generate"
       }
     }
   ]

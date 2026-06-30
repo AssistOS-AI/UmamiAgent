@@ -1,0 +1,14 @@
+{
+  "pluginCategory": "application",
+  "id": "umami-settings",
+  "component": "umami-settings",
+  "location": [],
+  "label": "Umami Settings",
+  "tooltip": "Open Umami settings",
+  "icon": "./icon.svg",
+  "presenter": "UmamiSettings",
+  "type": "global",
+  "autoPin": false,
+  "dependencies": [],
+  "settings": "umami-settings"
+}

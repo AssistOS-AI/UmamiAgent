@@ -9,7 +9,7 @@ UMAMI_MCP_DIR="${UMAMI_MCP_DIR:-/opt/umami-mcp}"
 UMAMI_MCP_PORT="${UMAMI_MCP_PORT:-7301}"
 UMAMI_BASE_URL="${UMAMI_BASE_URL:-http://127.0.0.1:${UMAMI_APP_PORT}}"
 UMAMI_MCP_SQLITE_PATH="${UMAMI_MCP_SQLITE_PATH:-/tmp/umami-mcp/sessions.db}"
-OAUTH_CLIENT_ID="${OAUTH_CLIENT_ID:-analytics-agent}"
+OAUTH_CLIENT_ID="${OAUTH_CLIENT_ID:-umami-agent}"
 OAUTH_REDIRECT_URI="${OAUTH_REDIRECT_URI:-http://127.0.0.1:${UMAMI_MCP_PORT}/oauth/callback}"
 BUN_INSTALL="${BUN_INSTALL:-/opt/bun}"
 
@@ -31,12 +31,12 @@ export PGPASSWORD="${POSTGRES_PASSWORD}"
 mkdir -p "$(dirname "${UMAMI_MCP_SQLITE_PATH}")"
 
 if [ ! -f "${UMAMI_MCP_DIR}/dist/index.js" ]; then
-    echo "ERROR: ${UMAMI_MCP_DIR}/dist/index.js is missing from the analytics-agent image." >&2
+    echo "ERROR: ${UMAMI_MCP_DIR}/dist/index.js is missing from the umami-agent image." >&2
     exit 1
 fi
 
 if [ ! -f /app/server.js ]; then
-    echo "ERROR: /app/server.js is missing from the analytics-agent image." >&2
+    echo "ERROR: /app/server.js is missing from the umami-agent image." >&2
     exit 1
 fi
 
