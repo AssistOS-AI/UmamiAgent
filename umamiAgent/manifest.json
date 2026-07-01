@@ -30,10 +30,7 @@
   },
   "profiles": {
     "default": {
-      "server": "http://127.0.0.1:3000",
-      "ports": [
-        "127.0.0.1:0:7000"
-      ],
+      "additionalServerPort": "3000",
       "env": {
         "POSTGRES_DB": {
           "required": false,
