@@ -25,9 +25,6 @@
       "tags": ["umami", "read-only"]
     }
   },
-  "volumes": {
-    ".ploinky/data/umamiAgent/postgres": "/var/lib/postgresql/data"
-  },
   "profiles": {
     "default": {
       "additionalServerPort": "3000",

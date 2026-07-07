@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-PGDATA="${PGDATA:-/var/lib/postgresql/data}"
+PGDATA="${PGDATA:-/root/postgres}"
 POSTGRES_DB="${POSTGRES_DB:-umami}"
 POSTGRES_USER="${POSTGRES_USER:-umami}"
 UMAMI_APP_PORT="${UMAMI_APP_PORT:-3000}"

@@ -20,13 +20,8 @@ test('umami settings are registered without guest-enabling MCP', async () => {
     assert.equal(manifest.agent, 'sh /code/scripts/start-umami-agent.sh');
     assert.equal(manifest.container, 'docker.io/assistos/umami-agent:umami-stack');
     assert.equal(manifest.enable, undefined);
-    assert.equal(manifest.profiles.default.server, 'http://127.0.0.1:3000');
-    assert.deepEqual(manifest.profiles.default.ports, [
-        '127.0.0.1:0:7000'
-    ]);
-    assert.deepEqual(manifest.volumes, {
-        '.ploinky/data/umamiAgent/postgres': '/var/lib/postgresql/data'
-    });
+    assert.equal(manifest.profiles.default.additionalServerPort, '3000');
+    assert.equal(manifest.volumes, undefined);
     assert.equal(manifest.profiles.default.env.POSTGRES_PASSWORD.sharedGeneratedSecret, true);
     assert.equal(manifest.profiles.default.env.APP_SECRET.sharedGeneratedSecret, true);
     assert.equal(manifest.profiles.default.env.UMAMI_BASE_URL.default, 'http://127.0.0.1:3000');
