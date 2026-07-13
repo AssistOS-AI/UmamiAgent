@@ -11,6 +11,7 @@
 - `scripts/start-umami-agent.sh` supervises PostgreSQL, Umami, the internal Umami MCP server, and Ploinky AgentServer.
 - The Umami dashboard is host-local by default at `http://127.0.0.1:3000`.
 - The internal Umami API URL is `http://127.0.0.1:3000`.
+- The manifest explicitly selects Ploinky `network.mode: "default"`. The stack is isolated from sibling agents, has no shared attachments, and declares no DNS aliases.
 - PostgreSQL data persists in the agent root storage at `/root/postgres`, mapped by Ploinky to the workspace `.data` area.
 - The MCP implementation runs `MadsNyl/umami-mcp` internally as an HTTP MCP server on `127.0.0.1:${UMAMI_MCP_PORT:-7301}`; do not expose that upstream MCP server directly to Ploinky.
 - `IDE-plugins/umami-settings/` registers the AchillesIDE `Umami Settings` settings modal and generates browser snippets for Umami's public `/script.js`.

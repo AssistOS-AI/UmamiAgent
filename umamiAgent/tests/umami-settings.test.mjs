@@ -19,6 +19,8 @@ test('umami settings are registered without guest-enabling MCP', async () => {
     assert.equal(manifest.guest, undefined);
     assert.equal(manifest.agent, 'sh /code/scripts/start-umami-agent.sh');
     assert.equal(manifest.container, 'docker.io/assistos/umami-agent:umami-stack');
+    assert.deepEqual(manifest.network, { mode: 'default' });
+    assert.equal(JSON.stringify(manifest.network).includes('aliases'), false);
     assert.equal(manifest.enable, undefined);
     assert.equal(manifest.profiles.default.additionalServerPort, '3000');
     assert.equal(manifest.volumes, undefined);

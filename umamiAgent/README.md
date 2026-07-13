@@ -8,6 +8,7 @@
 - `mcp-config.json` exposes one tool per allowed Umami operation.
 - `tools/umami_tool.mjs` calls the internal `MadsNyl/umami-mcp` HTTP MCP server.
 - The custom `docker.io/assistos/umami-agent:umami-stack` image contains Umami, PostgreSQL, Bun, and the built `MadsNyl/umami-mcp` server.
+- The manifest uses Ploinky's isolated `mode: "default"` network and declares no shared attachment or DNS alias.
 
 ## Umami Stack
 
