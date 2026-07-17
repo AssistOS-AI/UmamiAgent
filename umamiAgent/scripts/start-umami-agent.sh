@@ -5,9 +5,10 @@ PGDATA="${PGDATA:-/root/postgres}"
 POSTGRES_DB="${POSTGRES_DB:-umami}"
 POSTGRES_USER="${POSTGRES_USER:-umami}"
 UMAMI_APP_PORT="${UMAMI_APP_PORT:-3000}"
+UMAMI_BASE_PATH="/services/umami"
 UMAMI_MCP_DIR="${UMAMI_MCP_DIR:-/opt/umami-mcp}"
 UMAMI_MCP_PORT="${UMAMI_MCP_PORT:-7301}"
-UMAMI_BASE_URL="${UMAMI_BASE_URL:-http://127.0.0.1:${UMAMI_APP_PORT}}"
+UMAMI_BASE_URL="http://127.0.0.1:${UMAMI_APP_PORT}${UMAMI_BASE_PATH}"
 UMAMI_MCP_SQLITE_PATH="${UMAMI_MCP_SQLITE_PATH:-/tmp/umami-mcp/sessions.db}"
 OAUTH_CLIENT_ID="${OAUTH_CLIENT_ID:-umami-agent}"
 OAUTH_REDIRECT_URI="${OAUTH_REDIRECT_URI:-http://127.0.0.1:${UMAMI_MCP_PORT}/oauth/callback}"
@@ -16,10 +17,13 @@ BUN_INSTALL="${BUN_INSTALL:-/opt/bun}"
 : "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
 : "${APP_SECRET:?APP_SECRET is required}"
 : "${MCP_SECRET:?MCP_SECRET is required}"
+: "${UMAMI_PASSWORD:?UMAMI_PASSWORD is required}"
+: "${UMAMI_TELEMETRY_ALLOWED_ORIGINS:?UMAMI_TELEMETRY_ALLOWED_ORIGINS is required}"
 
 export PATH="${BUN_INSTALL}/bin:/root/.bun/bin:${PATH}"
 export DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5432/${POSTGRES_DB}"
-export HOSTNAME="${HOSTNAME:-0.0.0.0}"
+export HOSTNAME="0.0.0.0"
+export BASE_PATH="${UMAMI_BASE_PATH}"
 export APP_SECRET
 export UMAMI_URL="${UMAMI_BASE_URL}"
 export MCP_SECRET
@@ -65,6 +69,9 @@ cleanup() {
     if [ -n "${umami_mcp_pid:-}" ]; then
         kill "${umami_mcp_pid}" 2>/dev/null || true
     fi
+    if [ -n "${telemetry_proxy_pid:-}" ]; then
+        kill "${telemetry_proxy_pid}" 2>/dev/null || true
+    fi
     if [ -n "${umami_app_pid:-}" ]; then
         kill "${umami_app_pid}" 2>/dev/null || true
     fi
@@ -107,8 +114,8 @@ umami_app_pid="$!"
 
 ready=0
 for _ in $(seq 1 60); do
-    if curl -fsS "http://127.0.0.1:${UMAMI_APP_PORT}/api/heartbeat" >/dev/null 2>&1 \
-        || curl -fsS "http://127.0.0.1:${UMAMI_APP_PORT}/" >/dev/null 2>&1; then
+    if curl -fsS "http://127.0.0.1:${UMAMI_APP_PORT}${UMAMI_BASE_PATH}/api/heartbeat" >/dev/null 2>&1 \
+        || curl -fsS "http://127.0.0.1:${UMAMI_APP_PORT}${UMAMI_BASE_PATH}/" >/dev/null 2>&1; then
         ready=1
         break
     fi
@@ -126,7 +133,7 @@ if [ "${ready}" != "1" ]; then
 fi
 
 cd "${UMAMI_MCP_DIR}"
-PORT="${UMAMI_MCP_PORT}" bun run dist/index.js &
+HOST=127.0.0.1 HOSTNAME=127.0.0.1 PORT="${UMAMI_MCP_PORT}" bun run dist/index.js &
 umami_mcp_pid="$!"
 
 ready=0
@@ -148,6 +155,30 @@ if [ "${ready}" != "1" ]; then
     exit 1
 fi
 
+cd /code
+node scripts/umami-telemetry-proxy.mjs &
+telemetry_proxy_pid="$!"
+
+ready=0
+for _ in $(seq 1 30); do
+    telemetry_status="$(curl -sS -o /dev/null -w '%{http_code}' "http://127.0.0.1:3001/not-allowed" || true)"
+    if [ "${telemetry_status}" = "404" ]; then
+        ready=1
+        break
+    fi
+    if ! kill -0 "${telemetry_proxy_pid}" 2>/dev/null; then
+        echo "ERROR: Umami telemetry proxy exited before becoming healthy." >&2
+        wait "${telemetry_proxy_pid}" || true
+        exit 1
+    fi
+    sleep 1
+done
+
+if [ "${ready}" != "1" ]; then
+    echo "ERROR: timed out waiting for Umami telemetry proxy on port 3001." >&2
+    exit 1
+fi
+
 export PORT="${PLOINKY_AGENT_SERVER_PORT:-7000}"
 sh /Agent/server/AgentServer.sh &
 agent_server_pid="$!"
@@ -155,6 +186,7 @@ agent_server_pid="$!"
 while kill -0 "${postgres_pid}" 2>/dev/null \
     && kill -0 "${umami_app_pid}" 2>/dev/null \
     && kill -0 "${umami_mcp_pid}" 2>/dev/null \
+    && kill -0 "${telemetry_proxy_pid}" 2>/dev/null \
     && kill -0 "${agent_server_pid}" 2>/dev/null; do
     sleep 1
 done
@@ -162,5 +194,6 @@ done
 cleanup
 wait "${agent_server_pid}" 2>/dev/null || true
 wait "${umami_mcp_pid}" 2>/dev/null || true
+wait "${telemetry_proxy_pid}" 2>/dev/null || true
 wait "${umami_app_pid}" 2>/dev/null || true
 wait "${postgres_pid}" 2>/dev/null || true

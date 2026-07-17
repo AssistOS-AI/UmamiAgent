@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
-const DEFAULT_BASE_URL = 'http://127.0.0.1:3000';
+const DEFAULT_BASE_URL = 'http://127.0.0.1:3000/services/umami';
 const DEFAULT_OUTPUT_DIR = '/shared/deliverables/umami';
 const DEFAULT_MCP_PORT = 7301;
 const DEFAULT_OAUTH_CLIENT_ID = 'umami-agent';
@@ -243,7 +243,10 @@ async function bootstrapOAuthToken({ force = false } = {}) {
     }
 
     const username = normalizeString(process.env.UMAMI_USERNAME) || 'admin';
-    const password = normalizeString(process.env.UMAMI_PASSWORD) || 'umami';
+    const password = normalizeString(process.env.UMAMI_PASSWORD);
+    if (!password) {
+        throw new Error('UMAMI_PASSWORD is required for the local Umami OAuth bootstrap.');
+    }
 
     const baseUrl = oauthBaseUrl();
     const clientId = normalizeString(process.env.OAUTH_CLIENT_ID) || DEFAULT_OAUTH_CLIENT_ID;

@@ -1,6 +1,5 @@
 const STORAGE_KEY = 'umami-settings:v1';
 const DEFAULTS = Object.freeze({
-    umamiUrl: 'http://127.0.0.1:3000',
     websiteId: ''
 });
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -9,13 +8,14 @@ function normalizeString(value, fallback = '') {
     return typeof value === 'string' && value.trim() ? value.trim() : fallback;
 }
 
-function normalizeUrl(value, fallback = DEFAULTS.umamiUrl) {
-    const raw = normalizeString(value, fallback).replace(/\/+$/, '');
+function normalizeUrl(value) {
+    const raw = normalizeString(value).replace(/\/+$/, '');
+    if (!raw) return '';
     try {
         const parsed = new URL(raw);
         return `${parsed.origin}${parsed.pathname.replace(/\/+$/, '')}`;
     } catch {
-        return fallback;
+        return '';
     }
 }
 
@@ -99,7 +99,6 @@ function normalizeStoredWebsiteId(value) {
 function writeStoredSettings(state) {
     try {
         window.localStorage?.setItem(STORAGE_KEY, JSON.stringify({
-            umamiUrl: state.umamiUrl,
             websiteId: normalizeStoredWebsiteId(state.websiteId)
         }));
     } catch {
@@ -153,8 +152,8 @@ function formatErrorMessage(error, fallback) {
     return message.length > 260 ? `${message.slice(0, 257)}...` : message;
 }
 
-function buildScriptCode({ umamiUrl, websiteId }) {
-    const src = `${normalizeUrl(umamiUrl)}/script.js`;
+function buildScriptCode({ telemetryUrl, websiteId }) {
+    const src = `${normalizeUrl(telemetryUrl)}/script.js`;
     const lines = [
         '<script',
         '  defer',
@@ -165,17 +164,31 @@ function buildScriptCode({ umamiUrl, websiteId }) {
     return lines.join('\n');
 }
 
-function buildDashboardUrl(origin = window.location?.origin) {
-    try {
-        const parsed = new URL(normalizeString(origin, window.location?.origin));
-        parsed.hostname = 'umamiAgent.localhost';
-        parsed.pathname = '/';
-        parsed.search = '';
-        parsed.hash = '';
-        return parsed.toString().replace(/\/$/, '');
-    } catch {
-        return 'http://umamiAgent.localhost:8080';
+function buildDashboardUrl(activeBrowserUrl) {
+    const normalized = normalizeUrl(activeBrowserUrl);
+    if (!normalized) {
+        throw new Error('Umami dashboard topology is not active.');
     }
+    return normalized;
+}
+
+async function resolveTopologyLocator(slug, fetchImpl = window.fetch.bind(window)) {
+    const params = new URLSearchParams({ routeKey: 'umamiAgent', slug });
+    const response = await fetchImpl(`/api/edge/topology?${params}`, {
+        method: 'GET',
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: { accept: 'application/json' }
+    });
+    if (!response.ok) {
+        throw new Error(`Umami ${slug} topology is unavailable (${response.status}).`);
+    }
+    const payload = await response.json();
+    const activeBrowserUrl = normalizeUrl(payload?.browserUrl);
+    if (!activeBrowserUrl) {
+        throw new Error(`Umami ${slug} topology response has no active browser URL.`);
+    }
+    return activeBrowserUrl;
 }
 
 export class UmamiSettingsSettings {
@@ -185,7 +198,8 @@ export class UmamiSettingsSettings {
         this.props = element?.props || element?._componentProxy?.props || {};
         const stored = readStoredSettings();
         this.state = {
-            umamiUrl: normalizeUrl(stored.umamiUrl, DEFAULTS.umamiUrl),
+            dashboardUrl: '',
+            telemetryUrl: '',
             websiteId: normalizeStoredWebsiteId(stored.websiteId),
             websites: [],
             status: '',
@@ -203,6 +217,10 @@ export class UmamiSettingsSettings {
         this.bindEvents();
         this.syncInputsFromState();
         this.renderDerived();
+        if (!this.hasAttemptedTopologyLoad) {
+            this.hasAttemptedTopologyLoad = true;
+            void this.loadTopology();
+        }
         if (!this.hasAttemptedInitialWebsiteLoad) {
             this.hasAttemptedInitialWebsiteLoad = true;
             void this.loadWebsites({ quiet: true });
@@ -223,12 +241,6 @@ export class UmamiSettingsSettings {
         }
         this.element.dataset.umamiSettingsBound = 'true';
 
-        this.umamiUrlInput?.addEventListener('input', (event) => {
-            this.state.umamiUrl = String(event.target?.value || '');
-            this.clearStatus();
-            this.persistAndRender();
-        });
-
         this.websiteSelect?.addEventListener('change', (event) => {
             this.state.websiteId = String(event.target?.value || '').trim();
             this.clearStatus();
@@ -240,7 +252,7 @@ export class UmamiSettingsSettings {
 
     syncInputsFromState() {
         if (this.umamiUrlInput) {
-            this.umamiUrlInput.value = this.state.umamiUrl;
+            this.umamiUrlInput.value = this.state.telemetryUrl;
         }
         this.syncWebsiteSelect();
     }
@@ -275,7 +287,7 @@ export class UmamiSettingsSettings {
     }
 
     renderDerived() {
-        const validWebsiteId = isValidWebsiteId(this.state.websiteId);
+        const validWebsiteId = isValidWebsiteId(this.state.websiteId) && Boolean(this.state.telemetryUrl);
         if (this.copyButton) {
             this.copyButton.disabled = !validWebsiteId;
         }
@@ -331,11 +343,36 @@ export class UmamiSettingsSettings {
     }
 
     openDashboard() {
-        const dashboardUrl = buildDashboardUrl();
-        window.open(dashboardUrl, '_blank', 'noopener');
-        this.state.status = 'Dashboard opened in a new tab.';
-        this.state.statusType = '';
+        try {
+            const dashboardUrl = buildDashboardUrl(this.state.dashboardUrl);
+            window.open(dashboardUrl, '_blank', 'noopener');
+            this.state.status = 'Dashboard opened in a new tab.';
+            this.state.statusType = '';
+        } catch (error) {
+            this.state.status = formatErrorMessage(error, 'Umami dashboard is unavailable.');
+            this.state.statusType = 'error';
+        }
         this.renderStatus();
+    }
+
+    async loadTopology() {
+        try {
+            const [dashboardUrl, telemetryUrl] = await Promise.all([
+                resolveTopologyLocator('umami-dashboard'),
+                resolveTopologyLocator('umami-telemetry')
+            ]);
+            this.state.dashboardUrl = dashboardUrl;
+            this.state.telemetryUrl = telemetryUrl;
+            this.syncInputsFromState();
+            this.renderDerived();
+        } catch (error) {
+            this.state.dashboardUrl = '';
+            this.state.telemetryUrl = '';
+            this.state.status = formatErrorMessage(error, 'Umami publication topology is unavailable.');
+            this.state.statusType = 'error';
+            console.error('[umami-settings] Failed to resolve current topology', error);
+            this.renderDerived();
+        }
     }
 
     async loadWebsites(options = {}) {
@@ -384,6 +421,12 @@ export class UmamiSettingsSettings {
                 this.renderStatus();
                 return;
             }
+            if (!this.state.telemetryUrl) {
+                this.state.status = 'Umami telemetry topology is not active.';
+                this.state.statusType = 'error';
+                this.renderStatus();
+                return;
+            }
             const snippet = buildScriptCode(this.state);
             if (this.snippetArea) {
                 this.snippetArea.value = snippet;
@@ -411,7 +454,8 @@ export class UmamiSettingsSettings {
 }
 
 export {
-    buildDashboardUrl
+    buildDashboardUrl,
+    resolveTopologyLocator
 };
 
 export class UmamiSettings {

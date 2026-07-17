@@ -1,0 +1,17 @@
+name: Verify runtime-v5 source absence
+
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  source-absence:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Reject retired edge-publication source
+        run: node --test umamiAgent/tests/v5-source-absence.test.mjs

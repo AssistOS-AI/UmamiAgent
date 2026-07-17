@@ -2,76 +2,151 @@
 id: DS01
 title: Umami Agent
 status: implemented
-owner: achilleside-team
-summary: Defines the single-container read-only Umami agent, its MCP surface, embedded Umami stack, and security boundaries.
+owner: umami-team
+summary: Defines the pinned dashboard, narrow telemetry proxy, private MCP bind, source-partitioned abuse controls, base path, and topology projection.
 ---
 
 # DS01 - Umami Agent
 
 ## Core Content
 
-`umamiAgent` is a Ploinky MCP-first agent for read-only Umami data. The agent uses the standard bundled AgentServer as the public `/mcp` surface and declares every callable operation in `mcp-config.json`.
+### Runtime
 
-The agent does not start host-side Docker Compose and does not depend on separate Ploinky service agents. It runs the custom image `docker.io/assistos/umami-agent:umami-stack`, which layers PostgreSQL, Bun, and a built `MadsNyl/umami-mcp` checkout onto `docker.umami.is/umami-software/umami:postgresql-latest`.
+The agent uses a pinned multi-architecture image digest and supervises:
 
-`scripts/start-umami-agent.sh` is the single-container supervisor. It initializes PostgreSQL under `/root/postgres` when needed, starts PostgreSQL on `127.0.0.1:5432`, ensures the configured `POSTGRES_DB` exists, runs Umami's database check and tracker update, starts Umami on `0.0.0.0:${UMAMI_APP_PORT:-3000}`, starts `MadsNyl/umami-mcp` on `127.0.0.1:${UMAMI_MCP_PORT:-7301}`, and then starts Ploinky AgentServer on container port `7000`.
+- Umami dashboard/API on private TCP `3000` with
+  `BASE_PATH=/services/umami`;
+- a dedicated narrow telemetry proxy on private TCP `3001`;
+- MCP on an explicit loopback/private bind; and
+- process-local PostgreSQL.
 
-The manifest explicitly selects Ploinky `network.mode: "default"`. Umami receives a separate workspace-owned bridge with outbound NAT and router-gateway access but no shared sibling-agent attachment or sibling DNS. It must not join `webmeet-signaling`, `webmeet-turn`, or `office-publishing`, and it declares no aliases. PostgreSQL, Umami, and the internal MCP adapter communicate only over the container's own loopback namespace.
+The image definition itself is immutable: it uses the reviewed Umami `3.2.0`
+amd64/arm64 OCI index digest, verifies the architecture-specific Bun `1.3.14`
+musl archive by SHA-256, fetches and verifies exact `MadsNyl/umami-mcp` commit
+`3ab73beda2db0ebffb0b07439b218ef562107520`, verifies that commit's `bun.lock`
+digest, and installs with the frozen lock. The build has no source override,
+floating ref, shallow clone, or installer-script execution path. A read-only
+source-lock record and matching labels are present in the image; the
+publication workflow verifies both native platform entries and reports the
+resulting immutable image index separately from consumer-manifest pinning.
 
-The Umami dashboard listens inside the container on `127.0.0.1:3000` and is declared as the profile `server`, so Ploinky exposes it through the router at `http://umamiAgent.localhost:8080/` without reserving host port `3000`. Ploinky MCP is published through a dynamic localhost host port mapped to container port `7000`, so the router continues to own `/umamiAgent/mcp`. The agent reaches the Umami API through `UMAMI_BASE_URL`, defaulting to `http://127.0.0.1:3000`.
+Readiness must prove both HTTP targets and MCP before Router activation. The
+manifest declares authenticated dashboard service `umami-dashboard` on `3000`
+and guest telemetry service `umami-telemetry` on `3001`. These are private
+target mappings, not physical-host publications.
 
-`MadsNyl/umami-mcp` is an internal backend adapter. Ploinky users and agents never call it directly. `umami_tool.mjs` authenticates to the internal MadsNyl server through its OAuth flow, lists available upstream tools, maps each public Ploinky tool to a compatible upstream tool, validates input, and returns redacted output.
+### Dashboard and base path
 
-The agent defaults `UMAMI_USERNAME` to `admin` and `UMAMI_PASSWORD` to Umami's first-login password `umami` so a fresh local self-hosted install works without manual environment setup. Operators configure `UMAMI_PASSWORD` after changing the dashboard password. MadsNyl's SQLite session database is ephemeral at `/tmp/umami-mcp/sessions.db`; no host volume is used for those OAuth sessions. PostgreSQL data persists in the agent root storage at `/root/postgres`, mapped by Ploinky to the workspace `.data` area. Data from the retired `.ploinky/data/umamiDB/postgres` path is not migrated automatically.
+Dashboard access requires Ploinky authentication and retains Umami's own
+defense-in-depth authentication. Assets, redirects, API calls, navigation,
+tracker loading, ingestion, and any WebSocket must remain under the configured
+base path.
 
-## Public MCP Tools
+The Explorer settings plugin requests only its current authenticated locator
+from the no-store topology projection. It never fabricates a hostname or caches
+a startup URL.
 
-- `umami_websites_list`
-- `umami_stats_get`
-- `umami_pageviews_get`
-- `umami_metrics_get`
-- `umami_events_list`
-- `umami_active_get`
-- `umami_sessions_get`
-- `umami_report_generate`
+### Telemetry proxy
 
-The agent must not expose generic pass-through tools, write operations, Umami user/team/admin operations, website CRUD operations, tracking changes, or event ingestion.
+The proxy allows only:
 
-Website tracking snippets send browser events directly to the reachable Umami app endpoint, not to `umamiAgent`. `umamiAgent` remains a read-only Umami reporting surface.
+- `GET`/`HEAD` for the tracker script;
+- `POST` for the ingestion endpoint; and
+- bounded `OPTIONS` preflight for those operations.
 
-## IDE Settings Plugin
+It enforces exact configured Origins, JSON and body-size constraints, bounded
+request-body and upstream deadlines, a bounded fully-buffered upstream response
+before any guest-visible headers are sent, and value-free audit counters. An
+audit observer failure cannot change admission or availability. Dashboard,
+user, admin, arbitrary API, and unsupported method/path requests fail at the
+proxy.
 
-`umamiAgent` exposes static AchillesIDE plugin assets at `/IDE-plugins/umami-settings/*` with `access: "guest"` so the settings modal can load through the router. The manifest must not set global `guest: true` for this purpose, because the MCP surface remains policy-controlled and should not become guest-callable.
+Every ingestion `POST` requires the Router-owned
+`x-ploinky-rate-source` header. RoutingServer strips every client-supplied
+`x-ploinky-*` value and synthesizes this route-scoped partition from trusted
+canonical transport-source material only after listener, host, route, and
+policy validation. The value is not a user, session, or authorization identity.
+The proxy accepts exactly one case-insensitive 64-hex value, canonicalizes it to
+lowercase, and applies both a per-source fixed-window bucket and the global
+fixed-window bucket before dialing Umami. A missing, malformed, duplicated, or
+otherwise non-canonical source fails closed before the upstream request.
 
-The plugin contributes the `Umami Settings` workspace settings entry through `ideSettings`. Its `umami-settings` modal lets the operator enter the browser-reachable Umami URL, select a Website UUID from `umami_websites_list` loaded on modal open, and copy the generated script snippet. The modal must not ask the operator to paste the raw UUID manually and must not expose a manual website refresh button; operators close and reopen the modal after adding websites in Umami. MCP load errors must be visible in the modal and logged to the browser console.
+The proxy removes `Cookie`, `Authorization`, forwarding headers, hop-by-hop
+headers, and every `x-ploinky-*` header—including the consumed rate source—
+before forwarding to process-local Umami `3000`. It does not inject or forward
+Ploinky authentication, invocation, caller, or delegation metadata.
 
-`mcp-config.json` uses the AgentServer property-map input schema shape, not JSON Schema's `{ type, properties }` wrapper. A no-argument tool such as `umami_websites_list` must use `inputSchema: {}`. Otherwise AgentServer/MCP treats `type` and `properties` as user arguments and rejects calls before the tool reaches the Umami MCP adapter.
+`UMAMI_TELEMETRY_ALLOWED_ORIGINS` is an explicit required, non-secret operator
+setting containing exact HTTP(S) origins. Origin is an independent admission
+check and is never the rate-source key. Per-source and global limits are set by
+`UMAMI_TELEMETRY_PER_SOURCE_PER_MINUTE` and
+`UMAMI_TELEMETRY_GLOBAL_PER_MINUTE`; the retired per-Origin setting is rejected
+as absent from the manifest and has no runtime alias or fallback.
 
-The generated snippet uses Umami's browser tracker:
+`UMAMI_PASSWORD` is a required generated/operator secret. Startup and the local
+MCP OAuth bootstrap fail before admission when it is absent; neither path
+substitutes Umami's demonstration password.
 
-```html
-<script
-  defer
-  src="http://127.0.0.1:3000/script.js"
-  data-website-id="WEBSITE_ID"
-></script>
-```
+### Security and failure
 
-The modal may call `umami_websites_list` through `/umamiAgent/mcp` to list known websites when read-only credentials are configured. It does not create websites and does not ingest Umami events.
+Guest telemetry receives only service-scoped guest policy. It cannot reach the
+dashboard or MCP and receives no authenticated identity forwarding. Invalid
+base path, missing target, missing topology locator, malformed Origin, missing
+or malformed rate source, excess body, rate-limit breach, or unhealthy proxy
+fails before route activation or upstream dial as appropriate.
+
+### Verification
+
+Unit tests cover manifest contracts, topology-based settings, base path, method
+and path allowlists, credential sanitation, strict rate-source parsing,
+same-source exhaustion, distinct-source independence, global exhaustion,
+Origin/body/rate bounds, and upstream behavior. The release lane loads
+dashboard and telemetry with a real browser through Router.
 
 ## Decisions & Questions
 
-### Question #1: Why keep AgentServer in front of `umami-mcp`?
+### Question #1: Why is telemetry a separate service on private port 3001?
 
 Response:
-AgentServer preserves the Ploinky router, MCP policy, invocation-token, and `mcp-config.json` contracts. The upstream Umami MCP server remains an implementation detail and cannot widen the public tool surface without an explicit `mcp-config.json` change.
+The authenticated dashboard cannot safely serve as the guest ingestion surface.
+The narrow proxy gives tracker and ingestion requests an explicit method/path
+allowlist, bounded request handling, credential sanitation, and independent
+abuse controls while leaving Umami's administrative surface behind both
+Ploinky and Umami authentication.
 
-### Question #2: Why consolidate Umami into `umamiAgent`?
+### Question #2: Why does the proxy consume a Router-derived rate source?
 
 Response:
-This decision is retired. The Umami stack is now consolidated into the single `umamiAgent` container so Ploinky has one durable Umami agent identity while the container supervisor owns the internal PostgreSQL, Umami, and Umami MCP process lifecycle.
+All public requests reach the proxy from the Router peer, so the proxy socket's
+remote address cannot distinguish external callers. User, guest-session, or
+cookie values would turn the limiter into an identity-dependent contract and
+would fail when browser cookie persistence is blocked. RoutingServer therefore
+derives a route-scoped, one-way partition from trusted canonical transport
+source material after policy admission. The proxy validates that partition,
+uses it only as an in-memory bucket key, and strips it before upstream dial.
 
-### Question #3: Why is the settings plugin static instead of a new HTTP service?
+### Question #3: Why was the per-Origin limit removed rather than retained as another bucket?
 
 Response:
-The settings surface only needs to generate a browser snippet and optionally read the existing website list through the declared MCP tool. A static IDE plugin keeps the router boundary simple, avoids a second application endpoint, and does not introduce any event ingestion path through `umamiAgent`.
+Origin is already an exact allowlist admission boundary, but one allowed site
+origin is shared by all of that site's visitors. Treating it as the source
+bucket permits one client to exhaust every other client's allocation and does
+not satisfy the approved per-source control. The hard cut keeps only the
+Router-derived per-source bucket plus the box-wide global bucket; no legacy
+environment alias or dual-accounting path remains.
+
+### Question #4: Why keep AgentServer in front of the internal Umami MCP adapter?
+
+Response:
+AgentServer preserves Ploinky's MCP routing, policy, invocation, and explicit
+`mcp-config.json` contracts. The internal adapter remains a process-local
+implementation detail and cannot widen the public tool surface without a
+manifested tool change.
+
+### Question #5: Why is the Umami stack consolidated into one agent container?
+
+Response:
+The single agent identity keeps PostgreSQL, Umami, telemetry sanitation, and the
+internal MCP adapter inside one isolated runtime. Their support listeners stay
+process-private while Ploinky maps only the two declared HTTP service targets
+and the normal AgentServer target inside the box.

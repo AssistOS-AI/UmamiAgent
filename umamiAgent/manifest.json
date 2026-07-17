@@ -1,5 +1,5 @@
 {
-  "container": "docker.io/assistos/umami-agent:umami-stack",
+  "container": "docker.io/assistos/umami-agent@sha256:0d38f97dbe4407f80418d05c9ab6cdc4452f9b62dbaa462d6c84884bb551c566",
   "lite-sandbox": true,
   "agent": "sh /code/scripts/start-umami-agent.sh",
   "readiness": {
@@ -16,7 +16,25 @@
   "network": {
     "mode": "default"
   },
-  "about": "Read-only Umami agent for AchillesIDE.",
+  "about": "Read-only Umami MCP agent with authenticated dashboard and narrow guest telemetry proxy.",
+  "httpServices": [
+    {
+      "slug": "umami-dashboard",
+      "port": 3000,
+      "externalPrefix": "/services/umami/",
+      "internalPrefix": "/services/umami/",
+      "access": "authenticated"
+    },
+    {
+      "slug": "umami-telemetry",
+      "port": 3001,
+      "externalPrefix": "/public-services/umami-telemetry/",
+      "internalPrefix": "/",
+      "access": "guest",
+      "invocation": false,
+      "includeAuthInfo": false
+    }
+  ],
   "endpoints": {
     "agent-card": {
       "name": "Umami Agent",
@@ -26,71 +44,29 @@
   },
   "profiles": {
     "default": {
-      "additionalServerPort": "3000",
       "env": {
-        "POSTGRES_DB": {
-          "required": false,
-          "default": "umami"
-        },
-        "POSTGRES_USER": {
-          "required": false,
-          "default": "umami"
-        },
-        "POSTGRES_PASSWORD": {
-          "name": "UMAMI_POSTGRES_PASSWORD",
-          "required": true,
-          "sharedGeneratedSecret": true
-        },
-        "APP_SECRET": {
-          "name": "UMAMI_APP_SECRET",
-          "required": true,
-          "sharedGeneratedSecret": true
-        },
-        "UMAMI_BASE_URL": {
-          "required": false,
-          "default": "http://127.0.0.1:3000"
-        },
-        "UMAMI_USERNAME": {
-          "required": false,
-          "default": "admin"
-        },
-        "UMAMI_PASSWORD": {
-          "required": false,
-          "default": "umami"
-        },
-        "UMAMI_TOKEN": {
-          "required": false
-        },
-        "UMAMI_DEFAULT_WEBSITE_ID": {
-          "required": false
-        },
-        "UMAMI_TIMEZONE": {
-          "required": false
-        },
-        "UMAMI_MCP_PORT": {
-          "required": false,
-          "default": "7301"
-        },
-        "MCP_SECRET": {
-          "name": "UMAMI_MCP_SECRET",
-          "required": true,
-          "sharedGeneratedSecret": true
-        },
-        "OAUTH_CLIENT_ID": {
-          "required": false,
-          "default": "umami-agent"
-        },
-        "OAUTH_REDIRECT_URI": {
-          "required": false
-        },
-        "UMAMI_MCP_SQLITE_PATH": {
-          "required": false,
-          "default": "/tmp/umami-mcp/sessions.db"
-        },
-        "UMAMI_OUTPUT_DIR": {
-          "required": false,
-          "default": "/shared/deliverables/umami"
-        }
+        "POSTGRES_DB": { "required": false, "default": "umami" },
+        "POSTGRES_USER": { "required": false, "default": "umami" },
+        "POSTGRES_PASSWORD": { "name": "UMAMI_POSTGRES_PASSWORD", "required": true, "sharedGeneratedSecret": true },
+        "APP_SECRET": { "name": "UMAMI_APP_SECRET", "required": true, "sharedGeneratedSecret": true },
+        "UMAMI_USERNAME": { "required": false, "default": "admin" },
+        "UMAMI_PASSWORD": { "name": "UMAMI_ADMIN_PASSWORD", "required": true, "sharedGeneratedSecret": true },
+        "UMAMI_TOKEN": { "required": false },
+        "UMAMI_DEFAULT_WEBSITE_ID": { "required": false },
+        "UMAMI_TIMEZONE": { "required": false },
+        "UMAMI_MCP_PORT": { "required": false, "default": "7301" },
+        "MCP_SECRET": { "name": "UMAMI_MCP_SECRET", "required": true, "sharedGeneratedSecret": true },
+        "OAUTH_CLIENT_ID": { "required": false, "default": "umami-agent" },
+        "OAUTH_REDIRECT_URI": { "required": false },
+        "UMAMI_MCP_SQLITE_PATH": { "required": false, "default": "/tmp/umami-mcp/sessions.db" },
+        "UMAMI_OUTPUT_DIR": { "required": false, "default": "/shared/deliverables/umami" },
+        "UMAMI_TELEMETRY_ALLOWED_ORIGINS": { "required": true },
+        "UMAMI_TELEMETRY_MAX_BODY_BYTES": { "required": false, "default": "65536" },
+        "UMAMI_TELEMETRY_PER_SOURCE_PER_MINUTE": { "required": false, "default": "120" },
+        "UMAMI_TELEMETRY_GLOBAL_PER_MINUTE": { "required": false, "default": "1200" },
+        "UMAMI_TELEMETRY_BODY_TIMEOUT_MS": { "required": false, "default": "5000" },
+        "UMAMI_TELEMETRY_UPSTREAM_TIMEOUT_MS": { "required": false, "default": "5000" },
+        "UMAMI_TELEMETRY_MAX_RESPONSE_BYTES": { "required": false, "default": "2097152" }
       }
     }
   },
