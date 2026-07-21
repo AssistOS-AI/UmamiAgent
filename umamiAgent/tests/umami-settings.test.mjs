@@ -20,7 +20,9 @@ test('umami settings are registered without guest-enabling MCP', async () => {
     assert.equal(manifest.agent, 'sh /code/scripts/start-umami-agent.sh');
     assert.equal(manifest.container, 'docker.io/assistos/umami-agent:umami-stack');
     assert.equal(manifest.enable, undefined);
-    assert.equal(manifest.profiles.default.additionalServerPort, '3000');
+    assert.equal(manifest.profiles.default.additionalServerPort, undefined);
+    assert.equal(manifest.openPorts, undefined);
+    assert.equal(manifest.ports, undefined);
     assert.equal(manifest.volumes, undefined);
     assert.equal(manifest.profiles.default.env.POSTGRES_PASSWORD.sharedGeneratedSecret, true);
     assert.equal(manifest.profiles.default.env.APP_SECRET.sharedGeneratedSecret, true);
@@ -77,7 +79,7 @@ test('umami settings generate Umami script snippets', async () => {
     const markup = await fs.readFile(SETTINGS_HTML, 'utf8');
 
     assert.match(source, /\/script\.js/);
-    assert.match(source, /umamiAgent\.localhost/);
+    assert.match(source, /base-agent-additional-server/);
     assert.ok(!source.includes('const dashboardUrl = normalizeUrl(this.state.umamiUrl'));
     assert.match(source, /data-website-id/);
     assert.ok(!source.includes('data-domains'));
@@ -91,7 +93,7 @@ test('umami settings generate Umami script snippets', async () => {
     assert.match(source, /decodeToolPayload/);
     assert.match(source, /MCP error/);
     assert.match(source, /console\.error/);
-    assert.match(source, /createAgentClient\('\/umamiAgent\/mcp'\)/);
+    assert.match(source, /UMAMI_AGENT_SERVER_PORT/);
     assert.match(source, /umami_websites_list/);
     assert.ok(!source.includes('/umamiAgent/mcp/script'));
     assert.match(markup, /id="umamiWebsiteSelect"/);

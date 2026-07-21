@@ -27,7 +27,6 @@
   },
   "profiles": {
     "default": {
-      "additionalServerPort": "3000",
       "env": {
         "POSTGRES_DB": {
           "required": false,

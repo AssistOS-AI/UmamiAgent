@@ -22,7 +22,7 @@ http://127.0.0.1:3000
 Ploinky exposes the dashboard through the router at:
 
 ```text
-http://umamiAgent.localhost:8080/
+/base-agent-additional-server/umamiAgent/3000/
 ```
 
 Inside the container, `umamiAgent` calls Umami at:
@@ -44,7 +44,7 @@ Website tracking snippets should send browser events directly to the Umami app U
 - the public Umami URL, defaulting to `http://127.0.0.1:3000`;
 - the Umami website selected from the Umami MCP website list.
 
-The plugin calls `umami_websites_list` through `/umamiAgent/mcp` when the modal opens and shows the returned websites in a selector when Umami credentials are configured. If a new website is added in the Umami dashboard, close and reopen the settings modal to reload the list. Errors from the MCP call are displayed in the modal and logged with `console.error`. Tracking data still goes directly from the website browser to Umami's `/script.js` endpoint, not to MCP.
+The plugin calls `umami_websites_list` through `/base-agent-additional-server/umamiAgent/7000/mcp` when the modal opens and shows the returned websites in a selector when Umami credentials are configured. If a new website is added in the Umami dashboard, close and reopen the settings modal to reload the list. Errors from the MCP call are displayed in the modal and logged with `console.error`. Tracking data still goes directly from the website browser to Umami's `/script.js` endpoint, not to MCP.
 
 ## MCP Backend
 

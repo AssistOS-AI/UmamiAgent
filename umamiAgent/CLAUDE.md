@@ -4,12 +4,12 @@
 
 ## Runtime
 
-- The Ploinky public surface is the standard AgentServer on `/mcp`.
+- The custom supervisor starts AgentServer on container port `7000`; browser MCP calls use `/base-agent-additional-server/umamiAgent/7000/mcp` because custom-command agents do not receive an implicit Ploinky primary route.
 - `umamiAgent` is the only Ploinky agent in the Umami stack.
 - The runtime image is `docker.io/assistos/umami-agent:umami-stack`.
 - The image layers PostgreSQL and built `MadsNyl/umami-mcp` onto `docker.umami.is/umami-software/umami:postgresql-latest`.
 - `scripts/start-umami-agent.sh` supervises PostgreSQL, Umami, the internal Umami MCP server, and Ploinky AgentServer.
-- The Umami dashboard is host-local by default at `http://127.0.0.1:3000`.
+- The Umami dashboard stays container-local at `http://127.0.0.1:3000` and authenticated browsers reach it through `/base-agent-additional-server/umamiAgent/3000/`.
 - The internal Umami API URL is `http://127.0.0.1:3000`.
 - PostgreSQL data persists in the agent root storage at `/root/postgres`, mapped by Ploinky to the workspace `.data` area.
 - The MCP implementation runs `MadsNyl/umami-mcp` internally as an HTTP MCP server on `127.0.0.1:${UMAMI_MCP_PORT:-7301}`; do not expose that upstream MCP server directly to Ploinky.

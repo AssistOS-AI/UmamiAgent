@@ -1,4 +1,7 @@
 const STORAGE_KEY = 'umami-settings:v1';
+const UMAMI_AGENT_ROUTE = 'umamiAgent';
+const UMAMI_APP_PORT = 3000;
+const UMAMI_AGENT_SERVER_PORT = 7000;
 const DEFAULTS = Object.freeze({
     umamiUrl: 'http://127.0.0.1:3000',
     websiteId: ''
@@ -168,13 +171,12 @@ function buildScriptCode({ umamiUrl, websiteId }) {
 function buildDashboardUrl(origin = window.location?.origin) {
     try {
         const parsed = new URL(normalizeString(origin, window.location?.origin));
-        parsed.hostname = 'umamiAgent.localhost';
-        parsed.pathname = '/';
+        parsed.pathname = `/base-agent-additional-server/${UMAMI_AGENT_ROUTE}/${UMAMI_APP_PORT}/`;
         parsed.search = '';
         parsed.hash = '';
-        return parsed.toString().replace(/\/$/, '');
+        return parsed.toString();
     } catch {
-        return 'http://umamiAgent.localhost:8080';
+        return `/base-agent-additional-server/${UMAMI_AGENT_ROUTE}/${UMAMI_APP_PORT}/`;
     }
 }
 
@@ -258,7 +260,9 @@ export class UmamiSettingsSettings {
             if (!module || typeof module.createAgentClient !== 'function') {
                 throw new Error('MCP browser client module is unavailable.');
             }
-            this.mcpClient = module.createAgentClient('/umamiAgent/mcp');
+            this.mcpClient = module.createAgentClient(
+                `/base-agent-additional-server/${UMAMI_AGENT_ROUTE}/${UMAMI_AGENT_SERVER_PORT}/mcp`
+            );
             return this.mcpClient;
         })();
 

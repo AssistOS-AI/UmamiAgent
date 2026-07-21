@@ -10,13 +10,13 @@ summary: Defines the single-container read-only Umami agent, its MCP surface, em
 
 ## Core Content
 
-`umamiAgent` is a Ploinky MCP-first agent for read-only Umami data. The agent uses the standard bundled AgentServer as the public `/mcp` surface and declares every callable operation in `mcp-config.json`.
+`umamiAgent` is a Ploinky MCP-first agent for read-only Umami data. The custom supervisor starts the bundled AgentServer on container port `7000` and declares every callable operation in `mcp-config.json`.
 
 The agent does not start host-side Docker Compose and does not depend on separate Ploinky service agents. It runs the custom image `docker.io/assistos/umami-agent:umami-stack`, which layers PostgreSQL, Bun, and a built `MadsNyl/umami-mcp` checkout onto `docker.umami.is/umami-software/umami:postgresql-latest`.
 
 `scripts/start-umami-agent.sh` is the single-container supervisor. It initializes PostgreSQL under `/root/postgres` when needed, starts PostgreSQL on `127.0.0.1:5432`, ensures the configured `POSTGRES_DB` exists, runs Umami's database check and tracker update, starts Umami on `0.0.0.0:${UMAMI_APP_PORT:-3000}`, starts `MadsNyl/umami-mcp` on `127.0.0.1:${UMAMI_MCP_PORT:-7301}`, and then starts Ploinky AgentServer on container port `7000`.
 
-The Umami dashboard listens inside the container on `127.0.0.1:3000` and is declared as the profile `server`, so Ploinky exposes it through the router at `http://umamiAgent.localhost:8080/` without reserving host port `3000`. Ploinky MCP is published through a dynamic localhost host port mapped to container port `7000`, so the router continues to own `/umamiAgent/mcp`. The agent reaches the Umami API through `UMAMI_BASE_URL`, defaulting to `http://127.0.0.1:3000`.
+The Umami dashboard listens inside the container on `127.0.0.1:3000`. Ploinky exposes it only through the authenticated reserved route `/base-agent-additional-server/umamiAgent/3000/`; the manifest declares no host port or additional-server field. Because the supervisor is a custom agent command, it has no implicit primary route. Browser MCP calls therefore use the same confined relay convention at `/base-agent-additional-server/umamiAgent/7000/mcp`. The agent reaches the Umami API internally through `UMAMI_BASE_URL`, defaulting to `http://127.0.0.1:3000`.
 
 `MadsNyl/umami-mcp` is an internal backend adapter. Ploinky users and agents never call it directly. `umami_tool.mjs` authenticates to the internal MadsNyl server through its OAuth flow, lists available upstream tools, maps each public Ploinky tool to a compatible upstream tool, validates input, and returns redacted output.
 
@@ -55,7 +55,7 @@ The generated snippet uses Umami's browser tracker:
 ></script>
 ```
 
-The modal may call `umami_websites_list` through `/umamiAgent/mcp` to list known websites when read-only credentials are configured. It does not create websites and does not ingest Umami events.
+The modal may call `umami_websites_list` through `/base-agent-additional-server/umamiAgent/7000/mcp` to list known websites when read-only credentials are configured. It does not create websites and does not ingest Umami events.
 
 ## Decisions & Questions
 
