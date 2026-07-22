@@ -24,6 +24,7 @@ test('umami settings are registered without guest-enabling MCP', async () => {
     assert.equal(manifest.openPorts, undefined);
     assert.equal(manifest.ports, undefined);
     assert.equal(manifest.volumes, undefined);
+    assert.equal(manifest.network, undefined);
     assert.equal(manifest.profiles.default.env.POSTGRES_PASSWORD.sharedGeneratedSecret, true);
     assert.equal(manifest.profiles.default.env.APP_SECRET.sharedGeneratedSecret, true);
     assert.equal(manifest.profiles.default.env.UMAMI_BASE_URL.default, 'http://127.0.0.1:3000');

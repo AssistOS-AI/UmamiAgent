@@ -13,10 +13,6 @@
       }
     ]
   },
-  "network": {
-    "name": "umami",
-    "aliases": ["umami-agent"]
-  },
   "about": "Read-only Umami agent for AchillesIDE.",
   "endpoints": {
     "agent-card": {
