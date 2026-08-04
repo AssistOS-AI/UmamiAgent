@@ -52,6 +52,10 @@ The plugin calls `umami_websites_list` through `/base-agent-additional-server/um
 
 The custom image preinstalls Bun and builds `https://github.com/MadsNyl/umami-mcp.git` into `/opt/umami-mcp`. `scripts/start-umami-agent.sh` starts that server on `127.0.0.1:${UMAMI_MCP_PORT:-7301}` before launching Ploinky AgentServer.
 
+The manifest intentionally omits `lite-sandbox`. The specialized image and its
+supervised PostgreSQL, Umami, MCP adapter, and AgentServer processes must stay
+container-backed and communicate over container loopback.
+
 The wrapper authenticates to the internal MCP server with OAuth using:
 
 - `UMAMI_BASE_URL`

@@ -12,13 +12,15 @@ const TOOL_JS = path.join(ROOT, 'tools', 'umami_tool.mjs');
 const SETTINGS_JS = path.join(ROOT, 'IDE-plugins', 'umami-settings', 'umami-settings.js');
 const SETTINGS_HTML = path.join(ROOT, 'IDE-plugins', 'umami-settings', 'umami-settings.html');
 
-test('umami settings are registered without guest-enabling MCP', async () => {
+test('umami manifest preserves the specialized container stack without guest-enabling MCP', async () => {
     const manifest = JSON.parse(await fs.readFile(MANIFEST, 'utf8'));
     const config = JSON.parse(await fs.readFile(CONFIG, 'utf8'));
 
     assert.equal(manifest.guest, undefined);
     assert.equal(manifest.agent, 'sh /code/scripts/start-umami-agent.sh');
     assert.equal(manifest.container, 'docker.io/assistos/umami-agent:umami-stack');
+    assert.equal(manifest['lite-sandbox'], undefined);
+    assert.deepEqual(manifest.readiness, { protocol: 'mcp' });
     assert.equal(manifest.enable, undefined);
     assert.equal(manifest.profiles.default.additionalServerPort, undefined);
     assert.equal(manifest.openPorts, undefined);
