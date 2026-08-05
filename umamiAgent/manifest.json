@@ -1,5 +1,6 @@
 {
   "container": "docker.io/assistos/umami-agent:umami-stack",
+  "lite-sandbox": true,
   "agent": "sh /code/scripts/start-umami-agent.sh",
   "readiness": {
     "protocol": "mcp"
