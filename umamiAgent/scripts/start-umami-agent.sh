@@ -43,8 +43,6 @@ fi
 mkdir -p "${PGDATA}"
 chown -R postgres:postgres "${PGDATA}"
 chmod 700 "${PGDATA}"
-mkdir -p /run/postgresql
-chown postgres:postgres /run/postgresql
 
 if [ ! -s "${PGDATA}/PG_VERSION" ]; then
     pwfile="$(mktemp)"
@@ -55,7 +53,13 @@ if [ ! -s "${PGDATA}/PG_VERSION" ]; then
     rm -f "${pwfile}"
 fi
 
-su-exec postgres postgres -D "${PGDATA}" -c listen_addresses=127.0.0.1 -p 5432 &
+# Ploinky bind-mounts its router descriptor and edge topology under /run, so
+# /run stays on the container's overlay rootfs instead of a tmpfs. PostgreSQL
+# chmods its Unix-domain socket after binding it, and that chmod returns
+# EPERM there, which is fatal to startup. Every client below connects over
+# loopback TCP, so serve TCP only rather than depending on a socket directory
+# whose permissions this runtime cannot grant.
+su-exec postgres postgres -D "${PGDATA}" -c listen_addresses=127.0.0.1 -p 5432 -c unix_socket_directories='' &
 postgres_pid="$!"
 
 cleanup() {
