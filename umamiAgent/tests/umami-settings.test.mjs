@@ -94,7 +94,9 @@ test('umami settings generate Umami script snippets', async () => {
     assert.match(source, /decodeToolPayload/);
     assert.match(source, /MCP error/);
     assert.match(source, /console\.error/);
-    assert.match(source, /UMAMI_AGENT_SERVER_PORT/);
+    assert.match(source, /const UMAMI_MCP_PATH = '\/umamiAgent\/mcp';/);
+    assert.match(source, /createAgentClient\(UMAMI_MCP_PATH\)/);
+    assert.ok(!source.includes('UMAMI_AGENT_SERVER_PORT'));
     assert.match(source, /umami_websites_list/);
     assert.ok(!source.includes('/umamiAgent/mcp/script'));
     assert.match(markup, /id="umamiWebsiteSelect"/);

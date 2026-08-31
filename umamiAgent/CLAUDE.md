@@ -4,7 +4,7 @@
 
 ## Runtime
 
-- The custom supervisor starts AgentServer on container port `7000`; browser MCP calls use `/base-agent-additional-server/umamiAgent/7000/mcp` because custom-command agents do not receive an implicit Ploinky primary route.
+- The custom supervisor starts AgentServer on container port `7000`; browser MCP calls use the Router-mediated `/umamiAgent/mcp` route so Ploinky can mint the per-tool secure-wire authorization required by AgentServer.
 - `umamiAgent` is the only Ploinky agent in the Umami stack.
 - The runtime image is `docker.io/assistos/umami-agent:umami-stack`.
 - The image layers PostgreSQL and built `MadsNyl/umami-mcp` onto `docker.umami.is/umami-software/umami:postgresql-latest`.

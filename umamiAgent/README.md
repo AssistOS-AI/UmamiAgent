@@ -46,7 +46,7 @@ Website tracking snippets should send browser events directly to the Umami app U
 - the public Umami URL, defaulting to `http://127.0.0.1:3000`;
 - the Umami website selected from the Umami MCP website list.
 
-The plugin calls `umami_websites_list` through `/base-agent-additional-server/umamiAgent/7000/mcp` when the modal opens and shows the returned websites in a selector when Umami credentials are configured. If a new website is added in the Umami dashboard, close and reopen the settings modal to reload the list. Errors from the MCP call are displayed in the modal and logged with `console.error`. Tracking data still goes directly from the website browser to Umami's `/script.js` endpoint, not to MCP.
+The plugin calls `umami_websites_list` through Ploinky's Router-mediated `/umamiAgent/mcp` endpoint when the modal opens and shows the returned websites in a selector when Umami credentials are configured. The canonical MCP route lets the Router mint the per-tool secure-wire authorization required by AgentServer; do not send MCP calls through the generic additional-server relay. If a new website is added in the Umami dashboard, close and reopen the settings modal to reload the list. Errors from the MCP call are displayed in the modal and logged with `console.error`. Tracking data still goes directly from the website browser to Umami's `/script.js` endpoint, not to MCP.
 
 ## MCP Backend
 

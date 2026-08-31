@@ -1,7 +1,7 @@
 const STORAGE_KEY = 'umami-settings:v1';
 const UMAMI_AGENT_ROUTE = 'umamiAgent';
 const UMAMI_APP_PORT = 3000;
-const UMAMI_AGENT_SERVER_PORT = 7000;
+const UMAMI_MCP_PATH = '/umamiAgent/mcp';
 const DEFAULTS = Object.freeze({
     umamiUrl: 'http://127.0.0.1:3000',
     websiteId: ''
@@ -260,9 +260,7 @@ export class UmamiSettingsSettings {
             if (!module || typeof module.createAgentClient !== 'function') {
                 throw new Error('MCP browser client module is unavailable.');
             }
-            this.mcpClient = module.createAgentClient(
-                `/base-agent-additional-server/${UMAMI_AGENT_ROUTE}/${UMAMI_AGENT_SERVER_PORT}/mcp`
-            );
+            this.mcpClient = module.createAgentClient(UMAMI_MCP_PATH);
             return this.mcpClient;
         })();
 
