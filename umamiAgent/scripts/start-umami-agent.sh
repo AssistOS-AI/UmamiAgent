@@ -5,6 +5,7 @@ PGDATA="${PGDATA:-/root/postgres}"
 POSTGRES_DB="${POSTGRES_DB:-umami}"
 POSTGRES_USER="${POSTGRES_USER:-umami}"
 UMAMI_APP_PORT="${UMAMI_APP_PORT:-3000}"
+UMAMI_UPSTREAM_PORT=3001
 UMAMI_MCP_DIR="${UMAMI_MCP_DIR:-/opt/umami-mcp}"
 UMAMI_MCP_PORT="${UMAMI_MCP_PORT:-7301}"
 UMAMI_BASE_URL="${UMAMI_BASE_URL:-http://127.0.0.1:${UMAMI_APP_PORT}}"
@@ -21,6 +22,7 @@ export PATH="${BUN_INSTALL}/bin:/root/.bun/bin:${PATH}"
 export DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5432/${POSTGRES_DB}"
 export HOSTNAME="${HOSTNAME:-0.0.0.0}"
 export APP_SECRET
+export BASE_PATH='/base-agent-additional-server/umamiAgent/3000'
 export UMAMI_URL="${UMAMI_BASE_URL}"
 export MCP_SECRET
 export OAUTH_CLIENT_ID
@@ -39,6 +41,12 @@ if [ ! -f /app/server.js ]; then
     echo "ERROR: /app/server.js is missing from the umami-agent image." >&2
     exit 1
 fi
+
+if [ "${UMAMI_APP_PORT}" != "3000" ]; then
+    echo "ERROR: this Umami image is built for the Router publication on port 3000." >&2
+    exit 1
+fi
+NODE_OPTIONS= node /code/scripts/umami-ingress.mjs --check-build
 
 mkdir -p "${PGDATA}"
 chown -R postgres:postgres "${PGDATA}"
@@ -71,6 +79,9 @@ cleanup() {
     fi
     if [ -n "${umami_app_pid:-}" ]; then
         kill "${umami_app_pid}" 2>/dev/null || true
+    fi
+    if [ -n "${umami_ingress_pid:-}" ]; then
+        kill "${umami_ingress_pid}" 2>/dev/null || true
     fi
     if [ -n "${postgres_pid:-}" ]; then
         kill "${postgres_pid}" 2>/dev/null || true
@@ -106,8 +117,10 @@ unset NODE_OPTIONS
 cd /app
 node /usr/local/lib/node_modules/npm/bin/npm-cli.js run check-db
 node scripts/update-tracker.js
-PORT="${UMAMI_APP_PORT}" node server.js &
+HOSTNAME=127.0.0.1 PORT="${UMAMI_UPSTREAM_PORT}" node server.js &
 umami_app_pid="$!"
+node /code/scripts/umami-ingress.mjs &
+umami_ingress_pid="$!"
 
 ready=0
 for _ in $(seq 1 60); do
@@ -116,9 +129,8 @@ for _ in $(seq 1 60); do
         ready=1
         break
     fi
-    if ! kill -0 "${umami_app_pid}" 2>/dev/null; then
-        echo "ERROR: Umami app exited before becoming healthy." >&2
-        wait "${umami_app_pid}" || true
+    if ! kill -0 "${umami_app_pid}" 2>/dev/null || ! kill -0 "${umami_ingress_pid}" 2>/dev/null; then
+        echo "ERROR: Umami app or ingress exited before becoming healthy." >&2
         exit 1
     fi
     sleep 1
@@ -158,6 +170,7 @@ agent_server_pid="$!"
 
 while kill -0 "${postgres_pid}" 2>/dev/null \
     && kill -0 "${umami_app_pid}" 2>/dev/null \
+    && kill -0 "${umami_ingress_pid}" 2>/dev/null \
     && kill -0 "${umami_mcp_pid}" 2>/dev/null \
     && kill -0 "${agent_server_pid}" 2>/dev/null; do
     sleep 1
@@ -167,4 +180,5 @@ cleanup
 wait "${agent_server_pid}" 2>/dev/null || true
 wait "${umami_mcp_pid}" 2>/dev/null || true
 wait "${umami_app_pid}" 2>/dev/null || true
+wait "${umami_ingress_pid}" 2>/dev/null || true
 wait "${postgres_pid}" 2>/dev/null || true

@@ -7,7 +7,7 @@
 - Ploinky AgentServer serves `/mcp`.
 - `mcp-config.json` exposes one tool per allowed Umami operation.
 - `tools/umami_tool.mjs` calls the internal `MadsNyl/umami-mcp` HTTP MCP server.
-- The custom `docker.io/assistos/umami-agent:umami-stack` image contains Umami, PostgreSQL, Bun, and the built `MadsNyl/umami-mcp` server.
+- The manifest pins an immutable `docker.io/assistos/umami-agent` image containing Umami, PostgreSQL, Bun, and the built `MadsNyl/umami-mcp` server.
 
 ## Umami Stack
 
@@ -30,6 +30,19 @@ Inside the container, `umamiAgent` calls Umami at:
 ```text
 http://127.0.0.1:3000
 ```
+
+The image builds Umami with `BASE_PATH=/base-agent-additional-server/umamiAgent/3000`.
+This is a build-time setting; changing an environment variable cannot repair a
+root-built Next.js bundle. Startup verifies the image's build metadata and Next
+configuration before initializing PostgreSQL.
+
+The agent ingress listens on container port `3000` and restores that fixed path
+before forwarding to Next.js on `127.0.0.1:3001`. It accepts only the exact Router
+`X-Forwarded-Prefix` when one is supplied. Internal callers without that header
+keep using unprefixed `/api/...` and `/script.js` paths on port `3000`. HTML, assets,
+API bodies, redirects, and service authentication pass through unchanged; no
+root `/_next` route or extra host port is published. A different prefix requires
+a matching image rebuild and agent contract update.
 
 The manifest uses Ploinky's isolated per-agent default network. The services in the stack communicate over container loopback, so no shared network or custom network alias is required.
 

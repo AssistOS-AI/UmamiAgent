@@ -6,10 +6,11 @@
 
 - The custom supervisor starts AgentServer on container port `7000`; browser MCP calls use the Router-mediated `/umamiAgent/mcp` route so Ploinky can mint the per-tool secure-wire authorization required by AgentServer.
 - `umamiAgent` is the only Ploinky agent in the Umami stack.
-- The runtime image is `docker.io/assistos/umami-agent:umami-stack`.
-- The image layers PostgreSQL and built `MadsNyl/umami-mcp` onto `docker.umami.is/umami-software/umami:postgresql-latest`.
+- The manifest pins an immutable `docker.io/assistos/umami-agent` image digest that has passed native runtime checks on both supported architectures.
+- The image preserves the pinned PostgreSQL, Bun, and built `MadsNyl/umami-mcp` runtime and builds Umami `3.2.0` from immutable upstream source with the Router publication path compiled in.
 - `scripts/start-umami-agent.sh` supervises PostgreSQL, Umami, the internal Umami MCP server, and Ploinky AgentServer.
-- The Umami dashboard stays container-local at `http://127.0.0.1:3000` and authenticated browsers reach it through `/base-agent-additional-server/umamiAgent/3000/`.
+- The Umami dashboard ingress stays container-local on port `3000` and authenticated browsers reach it through `/base-agent-additional-server/umamiAgent/3000/`. Next.js listens only on `127.0.0.1:3001` behind that ingress.
+- The image compiles the exact Router publication prefix as its build-time `BASE_PATH`. Startup validates `/app/ploinky-umami-build.json` and the Next build configuration. Never patch compiled HTML/JavaScript or expose a root `/_next` Router alias to compensate for a mismatched image.
 - The internal Umami API URL is `http://127.0.0.1:3000`.
 - The manifest omits `network` so Ploinky assigns the isolated per-agent default network; the embedded services communicate over container loopback and do not need a shared network or custom alias.
 - PostgreSQL data persists in the agent root storage at `/root/postgres`, mapped by Ploinky to the workspace `.data` area.

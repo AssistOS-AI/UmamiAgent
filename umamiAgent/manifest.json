@@ -1,5 +1,5 @@
 {
-  "container": "docker.io/assistos/umami-agent:umami-stack",
+  "container": "docker.io/assistos/umami-agent@sha256:ad92f307f563fb2b1b8e4006603555942e44f8fca575ce9c586c9d2c4c1a72c2",
   "lite-sandbox": true,
   "agent": "sh /code/scripts/start-umami-agent.sh",
   "readiness": {
