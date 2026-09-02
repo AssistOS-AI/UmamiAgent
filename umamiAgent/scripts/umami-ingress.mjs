@@ -90,7 +90,9 @@ export function createUmamiIngress({ upstreamPort = UMAMI_UPSTREAM_PORT } = {}) 
     return server;
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+// Ploinky stages /code through symlinks; startup clears Node's symlink options.
+if (process.argv[1] && fs.existsSync(process.argv[1])
+    && fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(import.meta.url))) {
     verifyUmamiBuild();
     if (process.argv[2] !== '--check-build') {
         if (process.argv.length !== 2) throw new Error('Unexpected Umami ingress arguments.');
