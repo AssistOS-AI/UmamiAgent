@@ -42,6 +42,9 @@ user before navigating. An earlier authorization failure therefore cannot send
 the authenticated browser back to the login page. The build metadata records
 the upstream source and the exact applied patch separately.
 
+Icon links and the web manifest use the same compiled publication prefix,
+including the manifest's icon resources. They never require Router-root assets.
+
 The agent ingress listens on container port `3000` and restores that fixed path
 before forwarding to Next.js on `127.0.0.1:3001`. It accepts only the exact Router
 `X-Forwarded-Prefix` when one is supplied. Internal callers without that header
