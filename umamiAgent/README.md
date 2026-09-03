@@ -36,6 +36,12 @@ This is a build-time setting; changing an environment variable cannot repair a
 root-built Next.js bundle. Startup verifies the image's build metadata and Next
 configuration before initializing PostgreSQL.
 
+The source build includes a recorded login cache correction. After successful
+authentication, it cancels any older login verification and caches the returned
+user before navigating. An earlier authorization failure therefore cannot send
+the authenticated browser back to the login page. The build metadata records
+the upstream source and the exact applied patch separately.
+
 The agent ingress listens on container port `3000` and restores that fixed path
 before forwarding to Next.js on `127.0.0.1:3001`. It accepts only the exact Router
 `X-Forwarded-Prefix` when one is supplied. Internal callers without that header
