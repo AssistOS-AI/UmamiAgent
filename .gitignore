@@ -13,3 +13,13 @@
 .agents/skills/oskill-build/
 .agents/skills/review-specs/
 # <<< ploinky default-skills <<<
+
+# Agent skills linked from the workspace skills hub (DocumentationSkills); not versioned here
+/.agents/skills/unslop
+/.agents/skills/web-design
+/.agents/skills/achilles-specs
+/.agents/skills/article-build
+/.agents/skills/detect-main-behaviors
+/.agents/skills/gamp-specs
+/.agents/skills/node-coding-style
+/.agents/skills/review-specs
