@@ -1,0 +1,21 @@
+:root { color-scheme: light dark; font-family: system-ui, sans-serif; line-height: 1.6; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+.page { width: 100%; padding: 1rem; }
+.page__panel { width: 100%; padding: 1rem; }
+.site-header { display: flex; align-items: center; gap: 1rem; padding: 1rem; border-bottom: 1px solid #8886; }
+.site-header nav { display: flex; gap: 1rem; flex-wrap: wrap; }
+.menu { position: relative; }
+.menu button { font: inherit; padding: .4rem .8rem; cursor: pointer; }
+.submenu { position: absolute; z-index: 2; min-width: 14rem; padding: .5rem; background: Canvas; border: 1px solid #8886; }
+.submenu a { display: block; padding: .4rem; }
+a { text-decoration: underline; text-underline-offset: .15em; }
+a:focus-visible, button:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.documentation-map { width: 100%; border-collapse: separate; border-spacing: .75rem; }
+.documentation-map th, .documentation-map td { text-align: left; vertical-align: top; padding: .5rem; }
+.documentation-map a, .documentation-map span { display: block; }
+pre { overflow-x: auto; padding: 1rem; background: #8881; }
+table { width: 100%; }
+td, th { padding: .5rem; text-align: left; }
+.site-footer { padding: 1rem; border-top: 1px solid #8886; }
+@media (max-width: 700px) { .page { padding: .5rem; } .page__panel { padding: .75rem; } .site-header { flex-wrap: wrap; } .documentation-map { display: block; overflow-x: auto; } }

@@ -1,12 +1,13 @@
 ---
-id: DS01
-title: Umami Agent
-status: implemented
-owner: achilleside-team
-summary: Defines the single-container read-only Umami agent, its MCP surface, embedded Umami stack, and security boundaries.
+title: DS004-umami-agent
+summary: Defines the single-container analytics tools, embedded Umami stack, and security boundaries.
 ---
 
-# DS01 - Umami Agent
+# DS004 Umami agent
+
+## Introduction
+
+[umamiAgent](wiki.html#definition-umami-agent) gives workspace callers controlled analytics and local report delivery. The upstream data boundary is read-only; local report files are an allowed output.
 
 ## Core Content
 
@@ -32,7 +33,7 @@ The manifest also omits a `network` declaration. Ploinky therefore assigns its i
 
 The agent defaults `UMAMI_USERNAME` to `admin` and `UMAMI_PASSWORD` to Umami's first-login password `umami` so a fresh local self-hosted install works without manual environment setup. Operators configure `UMAMI_PASSWORD` after changing the dashboard password. MadsNyl's SQLite session database is ephemeral at `/tmp/umami-mcp/sessions.db`; no host volume is used for those OAuth sessions. PostgreSQL data persists in the agent root storage at `/root/postgres`, mapped by Ploinky to the workspace `.data` area.
 
-## Public MCP Tools
+### Public MCP Tools
 
 - `umami_websites_list`
 - `umami_stats_get`
@@ -45,9 +46,9 @@ The agent defaults `UMAMI_USERNAME` to `admin` and `UMAMI_PASSWORD` to Umami's f
 
 The agent must not expose generic pass-through tools, write operations, Umami user/team/admin operations, website CRUD operations, tracking changes, or event ingestion.
 
-Website tracking snippets send browser events directly to the reachable Umami app endpoint, not to `umamiAgent`. `umamiAgent` remains a read-only Umami reporting surface.
+Website tracking snippets send browser events directly to the reachable Umami app endpoint, not to `umamiAgent`. `umamiAgent` remains a read-only Umami reporting service. `umami_report_generate` writes Markdown to `UMAMI_OUTPUT_DIR` or `/shared/deliverables/umami` and returns `filePath`; a repeated sanitized label replaces that local file.
 
-## IDE Settings Plugin
+### IDE Settings Plugin
 
 `umamiAgent` exposes static AchillesIDE plugin assets at `/IDE-plugins/umami-settings/*` with `access: "guest"` so the settings modal can load through the router. The manifest must not set global `guest: true` for this purpose, because the MCP surface remains policy-controlled and should not become guest-callable.
 
@@ -67,19 +68,16 @@ The generated snippet uses Umami's browser tracker:
 
 The modal may call `umami_websites_list` through `/umamiAgent/mcp` to list known websites when read-only credentials are configured. It does not create websites and does not ingest Umami events.
 
-## Decisions & Questions
+### Runtime rationale
 
-### Question #1: Why keep AgentServer in front of `umami-mcp`?
+#### AgentServer public tool boundary
 
-Response:
 AgentServer preserves the Ploinky router, MCP policy, invocation-token, and `mcp-config.json` contracts. The upstream Umami MCP server remains an implementation detail and cannot widen the public tool surface without an explicit `mcp-config.json` change.
 
-### Question #2: Why consolidate Umami into `umamiAgent`?
+#### Single-container lifecycle ownership
 
-Response:
-This decision is retired. The Umami stack is now consolidated into the single `umamiAgent` container so Ploinky has one durable Umami agent identity while the container supervisor owns the internal PostgreSQL, Umami, and Umami MCP process lifecycle.
+The Umami stack is consolidated into the single `umamiAgent` container so Ploinky has one durable Umami agent identity while the container supervisor owns the internal PostgreSQL, Umami, and Umami MCP process lifecycle.
 
-### Question #3: Why is the settings plugin static instead of a new HTTP service?
+#### Static tracker settings
 
-Response:
 The settings surface only needs to generate a browser snippet and optionally read the existing website list through the declared MCP tool. A static IDE plugin keeps the router boundary simple, avoids a second application endpoint, and does not introduce any event ingestion path through `umamiAgent`.
