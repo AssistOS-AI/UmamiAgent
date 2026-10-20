@@ -83,7 +83,7 @@ The wrapper authenticates to the internal MCP server with OAuth using:
 
 Fresh local installs work with Umami's upstream default `admin` / `umami`. After changing the dashboard password, update `UMAMI_PASSWORD` so the read-only adapter can keep authenticating. Change the default password before exposing the deployment to other users.
 
-The manifest sets `routerAccess.requiredCapability` to `explorer.access`, so the dashboard and `/umamiAgent/mcp` are limited to users holding that capability; other signed-in users are redirected to the user dashboard. The guest settings-plugin route is subject to the same check.
+The manifest sets `routerAccess.requiredCapability` to `explorer.access`, so the dashboard and `/umamiAgent/mcp` are limited to users holding that capability; other signed-in users are redirected to the user dashboard when they open an HTML page, and API or MCP requests get a JSON 403. The guest settings-plugin route is subject to the same check.
 
 ## Exposed Tools
 
