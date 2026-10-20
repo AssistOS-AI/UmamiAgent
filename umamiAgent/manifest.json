@@ -6,6 +6,8 @@
     "protocol": "mcp"
   },
   "routerAccess": {
+    "requiredCapability": "explorer.access",
+    "capabilityDeniedRedirect": "/base-agent-additional-server/userPersistoAgent/7000/service/dashboard/",
     "httpRoutes": [
       {
         "path": "/IDE-plugins/umami-settings/*",

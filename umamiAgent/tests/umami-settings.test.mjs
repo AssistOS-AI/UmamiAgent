@@ -30,6 +30,11 @@ test('umami settings are registered without guest-enabling MCP', async () => {
     assert.equal(manifest.profiles.default.env.UMAMI_BASE_URL.default, 'http://127.0.0.1:3000');
     assert.equal(manifest.profiles.default.env.UMAMI_MCP_PORT.default, '7301');
     assert.equal(manifest.profiles.default.env.MCP_SECRET.sharedGeneratedSecret, true);
+    assert.equal(manifest.routerAccess.requiredCapability, 'explorer.access');
+    assert.equal(
+        manifest.routerAccess.capabilityDeniedRedirect,
+        '/base-agent-additional-server/userPersistoAgent/7000/service/dashboard/'
+    );
     assert.deepEqual(manifest.routerAccess.httpRoutes, [
         {
             path: '/IDE-plugins/umami-settings/*',
