@@ -78,6 +78,8 @@ AgentServer preserves the Ploinky router, MCP policy, invocation-token, and `mcp
 
 The Umami stack is consolidated into the single `umamiAgent` container so Ploinky has one durable Umami agent identity while the container supervisor owns the internal PostgreSQL, Umami, and Umami MCP process lifecycle.
 
+Readiness is the MCP handshake (`readiness.protocol: "mcp"`). The manifest's script-less `health.readiness` block (interval 2 s, timeout 2 s, failure threshold 75) sizes that wait to 300 s. Without it a targeted `ploinky restart` waits only 15 s, while the stack needs about 40 s to start PostgreSQL, Umami, the MCP adapter and AgentServer; the restart then fails and leaves the agent down. The block declares no script, so it adds no recurring probe.
+
 #### Static tracker settings
 
 The settings surface only needs to generate a browser snippet and optionally read the existing website list through the declared MCP tool. A static IDE plugin keeps the router boundary simple, avoids a second application endpoint, and does not introduce any event ingestion path through `umamiAgent`.

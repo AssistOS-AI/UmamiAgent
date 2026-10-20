@@ -30,6 +30,9 @@ test('umami settings are registered without guest-enabling MCP', async () => {
     assert.equal(manifest.profiles.default.env.UMAMI_BASE_URL.default, 'http://127.0.0.1:3000');
     assert.equal(manifest.profiles.default.env.UMAMI_MCP_PORT.default, '7301');
     assert.equal(manifest.profiles.default.env.MCP_SECRET.sharedGeneratedSecret, true);
+    assert.deepEqual(manifest.readiness, { protocol: 'mcp' });
+    // No script: the block only sizes the MCP wait (2 + 2 s x 75 = 300 s) for restarts too.
+    assert.deepEqual(manifest.health, { readiness: { interval: 2, timeout: 2, failureThreshold: 75, successThreshold: 1 } });
     assert.equal(manifest.routerAccess.requiredCapability, 'explorer.access');
     assert.equal(
         manifest.routerAccess.capabilityDeniedRedirect,

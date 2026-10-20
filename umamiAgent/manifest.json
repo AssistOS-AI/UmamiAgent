@@ -5,6 +5,14 @@
   "readiness": {
     "protocol": "mcp"
   },
+  "health": {
+    "readiness": {
+      "interval": 2,
+      "timeout": 2,
+      "failureThreshold": 75,
+      "successThreshold": 1
+    }
+  },
   "routerAccess": {
     "requiredCapability": "explorer.access",
     "capabilityDeniedRedirect": "/base-agent-additional-server/userPersistoAgent/7000/service/dashboard/",
