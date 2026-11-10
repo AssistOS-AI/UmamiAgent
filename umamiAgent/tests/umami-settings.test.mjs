@@ -58,7 +58,11 @@ test('umami settings are registered without guest-enabling MCP', async () => {
         {
             path: '/base-agent-additional-server/umamiAgent/3000/api/send',
             access: 'public',
-            publicProtocol: { methods: ['POST', 'OPTIONS'], allowCors: true }
+            publicProtocol: {
+                methods: ['POST', 'OPTIONS'],
+                allowCors: true,
+                allowHeaders: ['content-type', 'x-umami-website-id', 'x-umami-hostname', 'x-umami-cache']
+            }
         }
     ]);
     assert.deepEqual(manifest.ideSettings, [

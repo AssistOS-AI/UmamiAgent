@@ -34,7 +34,8 @@
         "access": "public",
         "publicProtocol": {
           "methods": ["POST", "OPTIONS"],
-          "allowCors": true
+          "allowCors": true,
+          "allowHeaders": ["content-type", "x-umami-website-id", "x-umami-hostname", "x-umami-cache"]
         }
       }
     ]

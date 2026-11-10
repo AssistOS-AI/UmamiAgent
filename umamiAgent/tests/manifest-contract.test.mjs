@@ -4,17 +4,31 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import { trackerCorsHeaders } from '../scripts/umami-ingress.mjs';
+
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const read = (file) => fs.readFileSync(path.join(ROOT, file), 'utf8');
 const manifest = JSON.parse(read('manifest.json'));
 const BASE = '/base-agent-additional-server/umamiAgent/3000';
+
+test('api/send admits exactly the tracker headers the ingress advertises', () => {
+    const send = manifest.routerAccess.httpRoutes.find((route) => route.path === `${BASE}/api/send`);
+    const advertised = trackerCorsHeaders({}, 'https://tracked.example')['access-control-allow-headers']
+        .split(',').map((name) => name.trim());
+    // The Router keeps only names both lists share, so drift would silently
+    // break the cross-origin preflight.
+    assert.deepEqual([...send.publicProtocol.allowHeaders].sort(), [...advertised].sort());
+});
 
 test('exactly the two tracker routes are public and nothing else under /api is', () => {
     const routes = manifest.routerAccess.httpRoutes;
     const publicRoutes = routes.filter((route) => route.access === 'public');
     assert.deepEqual(publicRoutes, [
         { path: `${BASE}/script.js`, access: 'public' },
-        { path: `${BASE}/api/send`, access: 'public', publicProtocol: { methods: ['POST', 'OPTIONS'], allowCors: true } },
+        { path: `${BASE}/api/send`, access: 'public', publicProtocol: {
+            methods: ['POST', 'OPTIONS'], allowCors: true,
+            allowHeaders: ['content-type', 'x-umami-website-id', 'x-umami-hostname', 'x-umami-cache'],
+        } },
     ]);
     for (const route of routes) {
         assert.ok(!/\*/.test(route.path) || route.access === 'guest', `${route.path} may only be a wildcard when it is a guest plugin asset`);
