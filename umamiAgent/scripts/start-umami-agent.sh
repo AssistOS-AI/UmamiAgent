@@ -48,6 +48,49 @@ if [ "${UMAMI_APP_PORT}" != "3000" ]; then
 fi
 NODE_OPTIONS= node /code/scripts/umami-ingress.mjs --check-build
 
+cleanup() {
+    if [ -n "${agent_server_pid:-}" ]; then
+        kill "${agent_server_pid}" 2>/dev/null || true
+    fi
+    if [ -n "${umami_mcp_pid:-}" ]; then
+        kill "${umami_mcp_pid}" 2>/dev/null || true
+    fi
+    if [ -n "${umami_app_pid:-}" ]; then
+        kill "${umami_app_pid}" 2>/dev/null || true
+    fi
+    if [ -n "${umami_ingress_pid:-}" ]; then
+        kill "${umami_ingress_pid}" 2>/dev/null || true
+    fi
+    if [ -n "${postgres_pid:-}" ]; then
+        kill "${postgres_pid}" 2>/dev/null || true
+    fi
+}
+trap cleanup INT TERM EXIT
+
+start_agent_server() {
+    PORT="${PLOINKY_AGENT_SERVER_PORT:-7000}" sh /Agent/server/AgentServer.sh &
+    agent_server_pid="$!"
+}
+
+# A Ploinky replacement (reinstall, image update) starts the new runtime while
+# its predecessor still serves, and both mount the same agent storage. Two
+# PostgreSQL servers on one data directory can corrupt it, and the
+# predecessor's shutdown deletes the successor's postmaster.pid, which stops
+# the successor a minute later. An exclusive flock on the shared storage keeps
+# one database owner. A successor that finds the lock held starts only
+# AgentServer, so its MCP readiness succeeds and Ploinky retires the
+# predecessor; the lock is released when that container exits, and the
+# successor then starts the Umami stack. The lock fd stays open for the whole
+# runtime, and child processes inherit it.
+UMAMI_DATA_LOCK="${UMAMI_DATA_LOCK:-$(dirname "${PGDATA}")/umami-postgres.lock}"
+exec 9>>"${UMAMI_DATA_LOCK}"
+if ! flock -n 9; then
+    echo "umamiAgent: another runtime still owns ${PGDATA}; starting AgentServer and waiting for it to exit." >&2
+    start_agent_server
+    flock 9
+    echo "umamiAgent: data directory released; starting the Umami stack." >&2
+fi
+
 mkdir -p "${PGDATA}"
 chown -R postgres:postgres "${PGDATA}"
 chmod 700 "${PGDATA}"
@@ -84,25 +127,6 @@ printf '%s\n%s\n' \
 # whose permissions this runtime cannot grant.
 su-exec postgres postgres -D "${PGDATA}" -c listen_addresses=127.0.0.1 -p 5432 -c unix_socket_directories='' &
 postgres_pid="$!"
-
-cleanup() {
-    if [ -n "${agent_server_pid:-}" ]; then
-        kill "${agent_server_pid}" 2>/dev/null || true
-    fi
-    if [ -n "${umami_mcp_pid:-}" ]; then
-        kill "${umami_mcp_pid}" 2>/dev/null || true
-    fi
-    if [ -n "${umami_app_pid:-}" ]; then
-        kill "${umami_app_pid}" 2>/dev/null || true
-    fi
-    if [ -n "${umami_ingress_pid:-}" ]; then
-        kill "${umami_ingress_pid}" 2>/dev/null || true
-    fi
-    if [ -n "${postgres_pid:-}" ]; then
-        kill "${postgres_pid}" 2>/dev/null || true
-    fi
-}
-trap cleanup INT TERM EXIT
 
 ready=0
 for _ in $(seq 1 60); do
@@ -179,9 +203,9 @@ if [ "${ready}" != "1" ]; then
     exit 1
 fi
 
-export PORT="${PLOINKY_AGENT_SERVER_PORT:-7000}"
-sh /Agent/server/AgentServer.sh &
-agent_server_pid="$!"
+if [ -z "${agent_server_pid:-}" ]; then
+    start_agent_server
+fi
 
 while kill -0 "${postgres_pid}" 2>/dev/null \
     && kill -0 "${umami_app_pid}" 2>/dev/null \

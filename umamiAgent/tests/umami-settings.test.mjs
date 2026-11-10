@@ -48,6 +48,15 @@ test('umami settings are registered without guest-enabling MCP', async () => {
         {
             path: '/IDE-plugins/umami-tool-button/*',
             access: 'guest'
+        },
+        {
+            path: '/base-agent-additional-server/umamiAgent/3000/script.js',
+            access: 'public'
+        },
+        {
+            path: '/base-agent-additional-server/umamiAgent/3000/api/send',
+            access: 'public',
+            publicProtocol: { methods: ['POST', 'OPTIONS'], allowCors: true }
         }
     ]);
     assert.deepEqual(manifest.ideSettings, [

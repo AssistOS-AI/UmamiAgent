@@ -33,6 +33,39 @@ function relayHeaders(headers) {
     )));
 }
 
+// The tracker endpoint is a public Router route that websites on other origins
+// POST to. Umami answers it with a wildcard CORS policy, which the Router never
+// relays, so echo the caller's exact origin with only what the tracker needs.
+export const TRACKER_SEND_PATH = '/api/send';
+
+export function isTrackerSendRequest(url) {
+    return typeof url === 'string' && url.split('?')[0] === TRACKER_SEND_PATH;
+}
+
+export function trackerCorsHeaders(headers, origin) {
+    let normalizedOrigin;
+    try {
+        const parsed = new URL(String(origin || ''));
+        if (!['http:', 'https:'].includes(parsed.protocol) || parsed.origin !== origin) return headers;
+        normalizedOrigin = parsed.origin;
+    } catch {
+        return headers;
+    }
+    const result = Object.fromEntries(Object.entries(headers).filter(([name]) => (
+        !name.toLowerCase().startsWith('access-control-') && name.toLowerCase() !== 'vary'
+    )));
+    const vary = String(headers.vary || headers.Vary || '').split(',').map((value) => value.trim()).filter(Boolean);
+    if (!vary.some((value) => value.toLowerCase() === 'origin')) vary.push('Origin');
+    return {
+        ...result,
+        'access-control-allow-origin': normalizedOrigin,
+        'access-control-allow-methods': 'POST, OPTIONS',
+        'access-control-allow-headers': 'content-type',
+        'access-control-max-age': '600',
+        vary: vary.join(', '),
+    };
+}
+
 export function upstreamPath(url) {
     if (typeof url !== 'string' || !url.startsWith('/') || url.startsWith('//') || /[\\\r\n#]/.test(url)) {
         throw new Error('Umami ingress requires an origin-form request target.');
@@ -65,7 +98,11 @@ export function createUmamiIngress({ upstreamPort = UMAMI_UPSTREAM_PORT } = {}) 
             path: requestPath,
             headers: relayHeaders(request.headers),
         }, (incoming) => {
-            response.writeHead(incoming.statusCode, relayHeaders(incoming.headers));
+            const headers = relayHeaders(incoming.headers);
+            response.writeHead(
+                incoming.statusCode,
+                isTrackerSendRequest(request.url) ? trackerCorsHeaders(headers, request.headers.origin) : headers,
+            );
             pipeline(incoming, response, () => {});
         });
         upstream.on('error', () => {

@@ -2,8 +2,22 @@ const STORAGE_KEY = 'umami-settings:v1';
 const UMAMI_AGENT_ROUTE = 'umamiAgent';
 const UMAMI_APP_PORT = 3000;
 const UMAMI_MCP_PATH = '/umamiAgent/mcp';
+// Container-local address the modal used to default to; browsers outside the container cannot reach it.
+const LEGACY_DEFAULT_UMAMI_URL = 'http://127.0.0.1:3000';
+
+// Public tracking URL: the Router publication of the Umami app on this Explorer's origin. The manifest
+// declares script.js and api/send under it as public routes, so anonymous site visitors can reach them.
+function defaultPublicUmamiUrl() {
+    const path = `/base-agent-additional-server/${UMAMI_AGENT_ROUTE}/${UMAMI_APP_PORT}`;
+    try {
+        return `${new URL(window.location.href).origin}${path}`;
+    } catch {
+        return `http://localhost:8080${path}`;
+    }
+}
+
 const DEFAULTS = Object.freeze({
-    umamiUrl: 'http://127.0.0.1:3000',
+    umamiUrl: defaultPublicUmamiUrl(),
     websiteId: ''
 });
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -187,7 +201,10 @@ export class UmamiSettingsSettings {
         this.props = element?.props || element?._componentProxy?.props || {};
         const stored = readStoredSettings();
         this.state = {
-            umamiUrl: normalizeUrl(stored.umamiUrl, DEFAULTS.umamiUrl),
+            umamiUrl: normalizeUrl(
+                normalizeUrl(stored.umamiUrl, DEFAULTS.umamiUrl) === LEGACY_DEFAULT_UMAMI_URL ? '' : stored.umamiUrl,
+                DEFAULTS.umamiUrl
+            ),
             websiteId: normalizeStoredWebsiteId(stored.websiteId),
             websites: [],
             websitesLoaded: false,

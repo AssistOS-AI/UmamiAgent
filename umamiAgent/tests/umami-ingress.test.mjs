@@ -7,7 +7,7 @@ import test from 'node:test';
 import { gzipSync } from 'node:zlib';
 
 import {
-    createUmamiIngress, upstreamPath, verifyUmamiBuild,
+    createUmamiIngress, upstreamPath, verifyUmamiBuild, trackerCorsHeaders,
     UMAMI_BASE_PATH, UMAMI_PUBLIC_PORT, UMAMI_UPSTREAM_PORT,
 } from '../scripts/umami-ingress.mjs';
 
@@ -154,4 +154,39 @@ test('upstream connection failure stays a visible HTTP failure', { timeout: 10_0
     } finally {
         await close(ingress);
     }
+});
+
+test('the tracker endpoint echoes the exact caller origin instead of Umami\'s wildcard CORS policy', { timeout: 10_000 }, async () => {
+    const umamiCors = {
+        'access-control-allow-origin': '*',
+        'access-control-allow-headers': '*',
+        'access-control-allow-methods': 'GET, DELETE, POST, PUT',
+        'access-control-max-age': '86400',
+    };
+    await withIngress((incoming, response) => {
+        response.writeHead(incoming.method === 'OPTIONS' ? 204 : 200, { ...umamiCors, 'content-type': 'application/json' });
+        response.end(incoming.method === 'OPTIONS' ? undefined : '{}');
+    }, async ({ port }) => {
+        const origin = 'https://site.example';
+        const preflight = await request(port, '/api/send', { method: 'OPTIONS', headers: { origin, 'access-control-request-method': 'POST' } });
+        assert.equal(preflight.status, 204);
+        assert.equal(preflight.headers['access-control-allow-origin'], origin);
+        assert.equal(preflight.headers['access-control-allow-methods'], 'POST, OPTIONS');
+        assert.equal(preflight.headers['access-control-allow-headers'], 'content-type');
+        assert.equal(preflight.headers['access-control-max-age'], '600');
+        assert.equal(preflight.headers.vary, 'Origin');
+        const send = await request(port, '/api/send', { method: 'POST', headers: { origin, 'content-type': 'application/json' }, body: '{}' });
+        assert.equal(send.headers['access-control-allow-origin'], origin);
+        const other = await request(port, '/api/websites', { headers: { origin } });
+        assert.equal(other.headers['access-control-allow-origin'], '*');
+        const noOrigin = await request(port, '/api/send', { method: 'POST', body: '{}' });
+        assert.equal(noOrigin.headers['access-control-allow-origin'], '*');
+    });
+});
+
+test('tracker CORS ignores opaque or non-HTTP origins', () => {
+    const headers = { 'access-control-allow-origin': '*' };
+    assert.equal(trackerCorsHeaders(headers, 'null'), headers);
+    assert.equal(trackerCorsHeaders(headers, 'file:///tmp/x'), headers);
+    assert.equal(trackerCorsHeaders(headers, 'https://site.example/path'), headers);
 });

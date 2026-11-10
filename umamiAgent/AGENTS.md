@@ -11,9 +11,11 @@ Read `docs/index.html`, `docs/specs/matrix.md`, and `docs/specs/DS001-coding-sty
 - The manifest pins an immutable `docker.io/assistos/umami-agent` image digest that has passed native runtime checks on both supported architectures.
 - The image preserves the pinned PostgreSQL, Bun, and built `MadsNyl/umami-mcp` runtime and builds Umami `3.2.0` from immutable upstream source with the Router publication path compiled in.
 - `scripts/start-umami-agent.sh` supervises PostgreSQL, Umami, the internal Umami MCP server, and Ploinky AgentServer.
+- Ploinky replacements (reinstall, image update) start the successor while the predecessor still runs on the same storage. The start script holds an exclusive `flock` on `umami-postgres.lock` beside `PGDATA`; a successor that finds it held starts only AgentServer (so readiness passes and Ploinky retires the predecessor), waits for the lock, then starts PostgreSQL and Umami. Never start PostgreSQL before taking that lock.
 - The Umami dashboard ingress stays container-local on port `3000` and authenticated browsers reach it through `/base-agent-additional-server/umamiAgent/3000/`. Next.js listens only on `127.0.0.1:3001` behind that ingress.
 - The image compiles the exact Router publication prefix as its build-time `BASE_PATH`. Startup validates `/app/ploinky-umami-build.json` and the Next build configuration. Never patch compiled HTML/JavaScript or expose a root `/_next` Router alias to compensate for a mismatched image.
 - The internal Umami API URL is `http://127.0.0.1:3000`.
+- `script.js` and `api/send` under the Router publication are the only public routes (tracker traffic from anonymous site visitors). The ingress replaces Umami's wildcard CORS on `api/send` with the exact caller origin, because the Router drops wildcard CORS. Do not make other Umami paths public.
 - The manifest omits `network` so Ploinky assigns the isolated per-agent default network; the embedded services communicate over container loopback and do not need a shared network or custom alias.
 - PostgreSQL data persists in the agent root storage at `/root/postgres`, mapped by Ploinky to the workspace `.data` area.
 - The MCP implementation runs `MadsNyl/umami-mcp` internally as an HTTP MCP server on `127.0.0.1:${UMAMI_MCP_PORT:-7301}`; do not expose that upstream MCP server directly to Ploinky.
