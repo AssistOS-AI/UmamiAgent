@@ -25,7 +25,7 @@ An MCP caller initiates one of the 24 declared tools (the original eight and 16 
 
 Ploinky activation starts the agent supervisor. It must validate the source-built publication contract, initialize and start PostgreSQL, run Umami's database check and tracker update, run the `db` bootstrap phase, start Umami and its ingress, run the `api` bootstrap phase once Umami is healthy, and start AgentServer. Operators reach the dashboard through `/base-agent-additional-server/umamiAgent/3000/` and invoke tools through `/umamiAgent/mcp`. Umami's built-in MCP endpoint must not become a public endpoint. A Next.js or ingress process failure, or a failed bootstrap phase, must stop the supervised stack. Persistent PostgreSQL storage preserves analytics across restarts.
 
-The `db` bootstrap phase upserts the internal API key row from `UMAMI_INTERNAL_KEY_SEED` and, only when `UMAMI_ADMIN_PASSWORD` is set (at least 16 characters), resets the `admin` account to that password. The `api` phase creates, updates or verifies each website in `UMAMI_SEED_WEBSITES` through Umami's API and fails when an id belongs to another user. Repeating either phase with unchanged input must make no writes and must say so.
+The `db` bootstrap phase upserts the internal API key row from `UMAMI_INTERNAL_KEY_SEED` and, only when `UMAMI_ADMIN_PASSWORD` is set, resets the `admin` account to that password. The `api` phase creates, updates or verifies each website in `UMAMI_SEED_WEBSITES` through Umami's API and fails when an id belongs to another user. Repeating either phase with unchanged input must make no writes and must say so.
 
 ### Tracker settings
 

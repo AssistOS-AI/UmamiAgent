@@ -14,7 +14,6 @@ export const INTERNAL_KEY_NAME = 'umamiAgent internal';
 export const API_KEY_PREFIX = 'umami_';
 // Umami's API_KEY_DISPLAY_LENGTH: the prefix plus the first eight key characters.
 export const API_KEY_DISPLAY_LENGTH = API_KEY_PREFIX.length + 8;
-export const MIN_ADMIN_PASSWORD_LENGTH = 16;
 export const BCRYPT_ROUNDS = 10;
 export const DEFAULT_BASE_URL = 'http://127.0.0.1:3000';
 
@@ -160,9 +159,6 @@ export async function runDbPhase({ env = process.env, query, bcrypt, loadBcryptI
     if (password === undefined || password === '') {
         log('umami-bootstrap[db]: UMAMI_ADMIN_PASSWORD is not set; the admin password is left unchanged.');
     } else {
-        if (password.length < MIN_ADMIN_PASSWORD_LENGTH) {
-            fail(`UMAMI_ADMIN_PASSWORD must be at least ${MIN_ADMIN_PASSWORD_LENGTH} characters.`);
-        }
         const rows = await query(selectAdminSql());
         if (!Array.isArray(rows) || rows.length !== 1) {
             fail(`The Umami admin user ${ADMIN_USER_ID} does not exist; cannot enforce its password.`);

@@ -134,14 +134,11 @@ test('db phase enforces a set admin password, repairs drift and makes no writes 
     assert.ok(!state.statements.some((sql) => /SET[^;]*username/.test(sql)));
 });
 
-test('db phase rejects a short password before touching the database and fails without the admin row', async () => {
+test('db phase enforces any non-empty password, including the upstream default, and fails without the admin row', async () => {
     const short = fakeDatabase();
-    await assert.rejects(
-        runDbPhase({ env: { UMAMI_INTERNAL_KEY_SEED: SEED, UMAMI_ADMIN_PASSWORD: 'x'.repeat(15) }, query: short.query, bcrypt, log: () => {} }),
-        (error) => error instanceof BootstrapError && /at least 16 characters/.test(error.message) && !error.message.includes('xxxx'),
-    );
-    assert.deepEqual(short.state.statements, []);
-    await runDbPhase({ env: { UMAMI_INTERNAL_KEY_SEED: SEED, UMAMI_ADMIN_PASSWORD: 'x'.repeat(16) }, query: short.query, bcrypt, log: () => {} });
+    // The operator chooses the password; a short one such as the upstream default is enforced like any other.
+    await runDbPhase({ env: { UMAMI_INTERNAL_KEY_SEED: SEED, UMAMI_ADMIN_PASSWORD: 'umami' }, query: short.query, bcrypt, log: () => {} });
+    assert.ok(short.state.statements.length > 0);
 
     const missing = fakeDatabase({ user: null });
     await assert.rejects(
