@@ -20,6 +20,10 @@
       {
         "path": "/IDE-plugins/umami-settings/*",
         "access": "guest"
+      },
+      {
+        "path": "/IDE-plugins/umami-tool-button/*",
+        "access": "guest"
       }
     ]
   },
@@ -40,12 +44,11 @@
         },
         "POSTGRES_USER": {
           "required": false,
-          "default": "umami"
+          "default": "admin"
         },
         "POSTGRES_PASSWORD": {
-          "name": "UMAMI_POSTGRES_PASSWORD",
-          "required": true,
-          "sharedGeneratedSecret": true
+          "required": false,
+          "default": "admin"
         },
         "APP_SECRET": {
           "name": "UMAMI_APP_SECRET",

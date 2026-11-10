@@ -25,7 +25,9 @@ test('umami settings are registered without guest-enabling MCP', async () => {
     assert.equal(manifest.ports, undefined);
     assert.equal(manifest.volumes, undefined);
     assert.equal(manifest.network, undefined);
-    assert.equal(manifest.profiles.default.env.POSTGRES_PASSWORD.sharedGeneratedSecret, true);
+    assert.equal(manifest.profiles.default.env.POSTGRES_PASSWORD.sharedGeneratedSecret, undefined);
+    assert.equal(manifest.profiles.default.env.POSTGRES_USER.default, 'admin');
+    assert.equal(manifest.profiles.default.env.POSTGRES_PASSWORD.default, 'admin');
     assert.equal(manifest.profiles.default.env.APP_SECRET.sharedGeneratedSecret, true);
     assert.equal(manifest.profiles.default.env.UMAMI_BASE_URL.default, 'http://127.0.0.1:3000');
     assert.equal(manifest.profiles.default.env.UMAMI_MCP_PORT.default, '7301');
@@ -41,6 +43,10 @@ test('umami settings are registered without guest-enabling MCP', async () => {
     assert.deepEqual(manifest.routerAccess.httpRoutes, [
         {
             path: '/IDE-plugins/umami-settings/*',
+            access: 'guest'
+        },
+        {
+            path: '/IDE-plugins/umami-tool-button/*',
             access: 'guest'
         }
     ]);
@@ -113,4 +119,22 @@ test('umami settings generate Umami script snippets', async () => {
     assert.ok(!markup.includes('umamiLoadWebsitesButton'));
     assert.ok(!markup.includes('Website UUID fallback'));
     assert.match(markup, /data-local-action="copyScriptCode"/);
+});
+
+test('umami toolbar button opens the Umami Settings popup', async () => {
+    const config = JSON.parse(await fs.readFile(path.join(ROOT, 'IDE-plugins', 'umami-tool-button', 'config.json'), 'utf8'));
+    assert.equal(config.component, 'umami-tool-button');
+    assert.equal(config.presenter, 'UmamiToolButton');
+    assert.deepEqual(config.location, ['file-exp:toolbar']);
+    assert.equal(config.toolbarModal, undefined);
+    const source = await fs.readFile(path.join(ROOT, 'IDE-plugins', 'umami-tool-button', 'umami-tool-button.js'), 'utf8');
+    assert.match(source, /export class UmamiToolButton/);
+    assert.match(source, /ensureSettingsComponentRegistered/);
+    assert.match(source, /openExpandedModal\(\{\s*mode: 'component',\s*component: UMAMI_SETTINGS_COMPONENT/);
+    assert.ok(source.includes("'/base-agent-additional-server/umamiAgent/3000/websites'"));
+});
+
+test('Open Dashboard targets the Umami websites page', async () => {
+    const source = await fs.readFile(SETTINGS_JS, 'utf8');
+    assert.ok(source.includes('/${UMAMI_APP_PORT}/websites`'));
 });

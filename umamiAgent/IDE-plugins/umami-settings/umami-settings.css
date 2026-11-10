@@ -1,51 +1,281 @@
+umami-settings {
+    --um-bg: #f6f7f9;
+    --um-surface: #ffffff;
+    --um-text: #1d2330;
+    --um-muted: #5f6878;
+    --um-line: #dde1e8;
+    --um-accent: #2f5bd3;
+    --um-accent-text: #ffffff;
+    --um-accent-soft: #e6ecfb;
+    --um-good: #1f7a4d;
+    --um-good-soft: #e3f3ea;
+    --um-bad: #b3261e;
+    --um-bad-soft: #fbe5e3;
+    --um-code-bg: #f0f2f5;
+    display: block;
+    color: var(--um-text);
+}
+
+umami-settings.umami-dark {
+    --um-bg: #14171c;
+    --um-surface: #1c2027;
+    --um-text: #e4e7ec;
+    --um-muted: #9aa3b2;
+    --um-line: #2e343e;
+    --um-accent: #7b9cf0;
+    --um-accent-text: #0f1420;
+    --um-accent-soft: #24304a;
+    --um-good: #6fcf9a;
+    --um-good-soft: #1d3328;
+    --um-bad: #f08c84;
+    --um-bad-soft: #3d2220;
+    --um-code-bg: #111419;
+}
+
+umami-settings *,
+umami-settings *::before,
+umami-settings *::after {
+    box-sizing: border-box;
+}
+
 umami-settings .umami-settings-modal {
-    min-width: min(760px, 94vw);
+    min-width: min(820px, 94vw);
 }
 
 umami-settings .umami-settings-body {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 16px;
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
-umami-settings .umami-settings-grid {
+/* Intro row: what the page is for, connection state and the main actions. */
+umami-settings .umami-intro {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 24px;
+}
+
+umami-settings .umami-intro-text {
+    flex: 1 1 320px;
+    min-width: 0;
+}
+
+umami-settings .umami-title {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 600;
+}
+
+umami-settings .umami-lead {
+    margin: 2px 0 0;
+    color: var(--um-muted);
+}
+
+umami-settings .umami-intro-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+umami-settings .umami-pill {
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    background: var(--um-line);
+    color: var(--um-muted);
+    white-space: nowrap;
+}
+
+umami-settings .umami-pill.on {
+    background: var(--um-good-soft);
+    color: var(--um-good);
+}
+
+umami-settings .umami-pill.off {
+    background: var(--um-bad-soft);
+    color: var(--um-bad);
+}
+
+umami-settings .umami-button {
+    padding: 6px 14px;
+    border: 1px solid var(--um-line);
+    border-radius: 6px;
+    background: var(--um-surface);
+    color: var(--um-text);
+    font: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+umami-settings .umami-button:hover:not(:disabled) {
+    border-color: var(--um-accent);
+}
+
+umami-settings .umami-button.primary {
+    background: var(--um-accent);
+    border-color: var(--um-accent);
+    color: var(--um-accent-text);
+}
+
+umami-settings .umami-button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+umami-settings .umami-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+}
+
+umami-settings .umami-panel {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 16px 20px;
+    background: var(--um-surface);
+    border: 1px solid var(--um-line);
+    border-radius: 8px;
+}
+
+umami-settings .umami-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     gap: 12px;
 }
 
-umami-settings .umami-settings-grid .form-item,
-umami-settings .umami-snippet-wrap {
+umami-settings .umami-panel-title {
     margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
+    font-size: 1rem;
+    font-weight: 600;
 }
 
-umami-settings .umami-settings-actions {
+umami-settings .umami-field {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: 4px;
+    margin: 0;
+}
+
+umami-settings .umami-field-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+umami-settings .umami-hint {
+    color: var(--um-muted);
+    font-size: 0.8rem;
+}
+
+umami-settings .umami-input {
+    width: 100%;
+    padding: 7px 10px;
+    border: 1px solid var(--um-line);
+    border-radius: 6px;
+    background: var(--um-surface);
+    color: var(--um-text);
+    font: inherit;
+}
+
+umami-settings code {
+    padding: 0 4px;
+    border-radius: 4px;
+    background: var(--um-code-bg);
+    font: 0.85em ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+umami-settings .umami-steps {
+    display: grid;
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+umami-settings .umami-steps li {
+    display: flex;
+    align-items: flex-start;
     gap: 10px;
 }
 
-umami-settings #umamiScriptSnippet {
+umami-settings .umami-step {
+    flex: none;
+    display: inline-grid;
+    place-items: center;
+    width: 1.4rem;
+    height: 1.4rem;
+    margin-top: 1px;
+    border-radius: 50%;
+    background: var(--um-accent);
+    color: var(--um-accent-text);
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+umami-settings .umami-code {
+    width: 100%;
     min-height: 150px;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    padding: 12px 14px;
+    border: 1px solid var(--um-line);
+    border-radius: 8px;
+    background: var(--um-code-bg);
+    color: var(--um-text);
+    font: 13px/1.55 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     white-space: pre;
+    resize: vertical;
 }
 
 umami-settings .umami-settings-status {
     min-height: 1.2rem;
-    color: var(--text-soft);
-    font-size: 0.92rem;
+    color: var(--um-muted);
+    font-size: 0.9rem;
 }
 
 umami-settings .umami-settings-status.error {
-    color: var(--file-exp-error);
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: var(--um-bad-soft);
+    color: var(--um-bad);
 }
 
-@media (max-width: 760px) {
-    umami-settings .umami-settings-grid {
-        grid-template-columns: 1fr;
+umami-settings :focus-visible {
+    outline: 2px solid var(--um-accent);
+    outline-offset: 2px;
+}
+
+/* Fullscreen panel opened from the toolbar button: the Explorer supplies the title bar and close control. */
+umami-settings.umami-settings-embedded {
+    min-height: 100%;
+    background: var(--um-bg);
+}
+
+umami-settings.umami-settings-embedded .modal-header {
+    display: none;
+}
+
+umami-settings.umami-settings-embedded .umami-settings-modal {
+    min-width: 0;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 40px 40px;
+}
+
+umami-settings.umami-settings-embedded .modal-body {
+    padding: 0;
+}
+
+@media (max-width: 700px) {
+    umami-settings.umami-settings-embedded .umami-settings-modal {
+        padding: 16px;
+    }
+
+    umami-settings .umami-panel-head {
+        flex-wrap: wrap;
     }
 }

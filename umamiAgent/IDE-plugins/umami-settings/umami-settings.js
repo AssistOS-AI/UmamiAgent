@@ -171,12 +171,12 @@ function buildScriptCode({ umamiUrl, websiteId }) {
 function buildDashboardUrl(origin = window.location?.origin) {
     try {
         const parsed = new URL(normalizeString(origin, window.location?.origin));
-        parsed.pathname = `/base-agent-additional-server/${UMAMI_AGENT_ROUTE}/${UMAMI_APP_PORT}/`;
+        parsed.pathname = `/base-agent-additional-server/${UMAMI_AGENT_ROUTE}/${UMAMI_APP_PORT}/websites`;
         parsed.search = '';
         parsed.hash = '';
         return parsed.toString();
     } catch {
-        return `/base-agent-additional-server/${UMAMI_AGENT_ROUTE}/${UMAMI_APP_PORT}/`;
+        return `/base-agent-additional-server/${UMAMI_AGENT_ROUTE}/${UMAMI_APP_PORT}/websites`;
     }
 }
 
@@ -190,6 +190,8 @@ export class UmamiSettingsSettings {
             umamiUrl: normalizeUrl(stored.umamiUrl, DEFAULTS.umamiUrl),
             websiteId: normalizeStoredWebsiteId(stored.websiteId),
             websites: [],
+            websitesLoaded: false,
+            websitesError: false,
             status: '',
             statusType: ''
         };
@@ -201,6 +203,10 @@ export class UmamiSettingsSettings {
     beforeRender() {}
 
     afterRender() {
+        // Mounted inside the Explorer's fullscreen expanded modal (toolbar button), the host
+        // supplies the title bar and close control, so the modal's own header is hidden.
+        this.element.classList.toggle('umami-settings-embedded', Boolean(this.element.closest('.expanded-modal-component')));
+        this.watchExplorerTheme();
         this.cacheElements();
         this.bindEvents();
         this.syncInputsFromState();
@@ -211,7 +217,24 @@ export class UmamiSettingsSettings {
         }
     }
 
+    // Follow the Explorer theme (theme-dark / theme-light on <html>) so the panel matches the rest of the IDE.
+    watchExplorerTheme() {
+        const root = document.documentElement;
+        const apply = () => this.element.classList.toggle('umami-dark', root.classList.contains('theme-dark'));
+        apply();
+        if (!this.themeObserver && typeof MutationObserver === 'function') {
+            this.themeObserver = new MutationObserver(apply);
+            this.themeObserver.observe(root, { attributes: true, attributeFilter: ['class'] });
+        }
+    }
+
+    afterUnload() {
+        this.themeObserver?.disconnect();
+        this.themeObserver = null;
+    }
+
     cacheElements() {
+        this.websiteCountElement = this.element.querySelector('#umamiWebsiteCount');
         this.umamiUrlInput = this.element.querySelector('#umamiUrl');
         this.websiteSelect = this.element.querySelector('#umamiWebsiteSelect');
         this.copyButton = this.element.querySelector('#umamiCopyButton');
@@ -287,7 +310,28 @@ export class UmamiSettingsSettings {
         }
 
         this.renderWebsiteList();
+        this.renderWebsiteCount();
         this.renderStatus();
+    }
+
+    renderWebsiteCount() {
+        if (!this.websiteCountElement) {
+            return;
+        }
+        const count = Array.isArray(this.state.websites) ? this.state.websites.length : 0;
+        let text = 'Connecting…';
+        if (this.state.websitesError) {
+            text = 'Umami unreachable';
+        } else if (this.state.websitesLoaded) {
+            text = `${count} website${count === 1 ? '' : 's'}`;
+        }
+        this.websiteCountElement.textContent = text;
+        this.websiteCountElement.classList.toggle('on', this.state.websitesLoaded && !this.state.websitesError);
+        this.websiteCountElement.classList.toggle('off', this.state.websitesError);
+    }
+
+    reloadWebsites() {
+        void this.loadWebsites();
     }
 
     syncWebsiteSelect() {
@@ -353,6 +397,8 @@ export class UmamiSettingsSettings {
             const payload = decodeToolPayload(toolResult);
             const websites = normalizeWebsiteList(payload);
             this.state.websites = websites;
+            this.state.websitesLoaded = true;
+            this.state.websitesError = false;
             if (!this.state.websiteId && websites.length === 1) {
                 this.state.websiteId = websites[0].id;
                 this.syncInputsFromState();
@@ -365,6 +411,8 @@ export class UmamiSettingsSettings {
             this.renderDerived();
         } catch (error) {
             this.state.websites = [];
+            this.state.websitesLoaded = false;
+            this.state.websitesError = true;
             this.state.status = formatErrorMessage(error, 'Failed to load websites.');
             this.state.statusType = 'error';
             console.error('[umami-settings] Failed to load websites through MCP', error);

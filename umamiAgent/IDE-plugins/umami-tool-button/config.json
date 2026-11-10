@@ -1,0 +1,16 @@
+{
+    "pluginCategory": "application",
+    "id": "umami",
+    "component": "umami-tool-button",
+    "location": [
+        "file-exp:toolbar"
+    ],
+    "locationOrder": 370,
+    "label": "Umami",
+    "tooltip": "Open Umami settings and tracking script",
+    "icon": "./icon.svg",
+    "presenter": "UmamiToolButton",
+    "type": "embedded",
+    "autoPin": false,
+    "dependencies": []
+}

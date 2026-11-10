@@ -1,26 +1,4 @@
 .idea
-# >>> ploinky default-skills >>>
+.agents
 .claude
-.agents/skills/achilles-skill-builder/
-.agents/skills/achilles-specs/
-.agents/skills/antropic-skill-build/
-.agents/skills/article-build/
-.agents/skills/create-akus/
-.agents/skills/cskill-build/
-.agents/skills/dgskill-build/
-.agents/skills/gamp-specs/
-.agents/skills/manage-ploinky-agents/
-.agents/skills/oskill-build/
-.agents/skills/review-specs/
-# <<< ploinky default-skills <<<
-
-# Agent skills linked from the workspace skills hub (DocumentationSkills); not versioned here
-/.agents/skills/unslop
-/.agents/skills/web-design
-/.agents/skills/achilles-specs
-/.agents/skills/article-build
-/.agents/skills/detect-main-behaviors
-/.agents/skills/gamp-specs
-/.agents/skills/node-coding-style
-/.agents/skills/review-specs
 .DS_Store

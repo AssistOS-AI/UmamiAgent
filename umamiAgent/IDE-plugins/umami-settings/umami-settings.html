@@ -7,30 +7,52 @@
     </div>
 
     <div class="modal-body umami-settings-body">
-        <div class="umami-settings-grid">
-            <label class="form-item">
-                <span class="form-label">Umami Public URL</span>
-                <input id="umamiUrl" class="form-input" type="url" placeholder="http://127.0.0.1:3000" spellcheck="false">
-            </label>
+        <section class="umami-intro">
+            <div class="umami-intro-text">
+                <h2 class="umami-title">Website tracking</h2>
+                <p class="umami-lead">Pick a website registered in Umami and paste its tracking script into that site's pages.</p>
+            </div>
+            <div class="umami-intro-actions">
+                <span id="umamiWebsiteCount" class="umami-pill" role="status">Connecting…</span>
+                <button type="button" class="umami-button" data-local-action="reloadWebsites">Reload websites</button>
+                <button type="button" class="umami-button primary" data-local-action="openDashboard">Open Dashboard ↗</button>
+            </div>
+        </section>
 
-            <label class="form-item">
-                <span class="form-label">Website</span>
-                <select id="umamiWebsiteSelect" class="form-input">
-                    <option value="">Load websites from Umami</option>
-                </select>
-            </label>
+        <div class="umami-grid">
+            <section class="umami-panel">
+                <h3 class="umami-panel-title">Tracking source</h3>
+                <label class="umami-field">
+                    <span class="umami-field-label">Website</span>
+                    <select id="umamiWebsiteSelect" class="umami-input">
+                        <option value="">Load websites from Umami</option>
+                    </select>
+                    <span class="umami-hint">Websites added in the Umami dashboard. Reload after adding a new one.</span>
+                </label>
+                <label class="umami-field">
+                    <span class="umami-field-label">Umami public URL</span>
+                    <input id="umamiUrl" class="umami-input" type="url" placeholder="http://127.0.0.1:3000" spellcheck="false">
+                    <span class="umami-hint">The address visitors' browsers use to reach Umami's <code>/script.js</code>.</span>
+                </label>
+            </section>
 
+            <section class="umami-panel">
+                <h3 class="umami-panel-title">How to install</h3>
+                <ol class="umami-steps">
+                    <li><span class="umami-step">1</span><span>Add the website in the Umami dashboard under <strong>Websites → Add website</strong>.</span></li>
+                    <li><span class="umami-step">2</span><span>Select it in <strong>Website</strong>; reload the list if it is new.</span></li>
+                    <li><span class="umami-step">3</span><span>Copy the script below and paste it inside the site's <code>&lt;head&gt;</code>.</span></li>
+                </ol>
+            </section>
         </div>
 
-        <div class="umami-settings-actions">
-            <button type="button" class="general-button" data-local-action="openDashboard">Open Dashboard</button>
-            <button type="button" id="umamiCopyButton" class="general-button" data-local-action="copyScriptCode">Copy script code</button>
-        </div>
-
-        <label class="form-item umami-snippet-wrap">
-            <span class="form-label">Generated script snippet</span>
-            <textarea id="umamiScriptSnippet" class="form-input" rows="7" spellcheck="false"></textarea>
-        </label>
+        <section class="umami-panel">
+            <div class="umami-panel-head">
+                <h3 class="umami-panel-title">Tracking script</h3>
+                <button type="button" id="umamiCopyButton" class="umami-button primary" data-local-action="copyScriptCode">Copy script code</button>
+            </div>
+            <textarea id="umamiScriptSnippet" class="umami-code" rows="6" spellcheck="false" readonly placeholder="Select a website to generate its tracking script."></textarea>
+        </section>
 
         <div id="umamiSettingsStatus" class="umami-settings-status" role="status" aria-live="polite"></div>
     </div>

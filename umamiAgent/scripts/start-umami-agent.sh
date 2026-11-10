@@ -3,7 +3,8 @@ set -eu
 
 PGDATA="${PGDATA:-/root/postgres}"
 POSTGRES_DB="${POSTGRES_DB:-umami}"
-POSTGRES_USER="${POSTGRES_USER:-umami}"
+POSTGRES_USER="${POSTGRES_USER:-admin}"
+POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-admin}"
 UMAMI_APP_PORT="${UMAMI_APP_PORT:-3000}"
 UMAMI_UPSTREAM_PORT=3001
 UMAMI_MCP_DIR="${UMAMI_MCP_DIR:-/opt/umami-mcp}"
@@ -14,7 +15,6 @@ OAUTH_CLIENT_ID="${OAUTH_CLIENT_ID:-umami-agent}"
 OAUTH_REDIRECT_URI="${OAUTH_REDIRECT_URI:-http://127.0.0.1:${UMAMI_MCP_PORT}/oauth/callback}"
 BUN_INSTALL="${BUN_INSTALL:-/opt/bun}"
 
-: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
 : "${APP_SECRET:?APP_SECRET is required}"
 : "${MCP_SECRET:?MCP_SECRET is required}"
 
@@ -60,6 +60,21 @@ if [ ! -s "${PGDATA}/PG_VERSION" ]; then
     su-exec postgres initdb -D "${PGDATA}" -U "${POSTGRES_USER}" --pwfile="${pwfile}" --auth-host=scram-sha-256 --auth-local=trust
     rm -f "${pwfile}"
 fi
+
+# The credentials are fixed configuration, not a secret derived from the
+# Ploinky master key, so re-apply them to whatever data directory is present.
+# A data directory created by an earlier workspace (different role or
+# password) then keeps working. Single-user mode needs no authentication and
+# opens no socket; it runs before the server starts.
+sql_literal() { printf "'%s'" "$(printf '%s' "$1" | sed "s/'/''/g")"; }
+sql_ident() { printf '"%s"' "$(printf '%s' "$1" | sed 's/"/""/g')"; }
+pg_role_literal="$(sql_literal "${POSTGRES_USER}")"
+pg_role_ident="$(sql_ident "${POSTGRES_USER}")"
+pg_password_literal="$(sql_literal "${POSTGRES_PASSWORD}")"
+printf '%s\n%s\n' \
+    "DO \$do\$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = ${pg_role_literal}) THEN CREATE ROLE ${pg_role_ident} SUPERUSER LOGIN; END IF; END \$do\$;" \
+    "ALTER ROLE ${pg_role_ident} WITH SUPERUSER LOGIN PASSWORD ${pg_password_literal};" \
+    | su-exec postgres postgres --single -D "${PGDATA}" postgres >/dev/null
 
 # Ploinky bind-mounts its router descriptor and edge topology under /run, so
 # /run stays on the container's overlay rootfs instead of a tmpfs. PostgreSQL

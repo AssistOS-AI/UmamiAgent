@@ -1,0 +1,27 @@
+umami-tool-button {
+    display: block;
+    width: 100%;
+    text-align: center;
+}
+
+.app-toolbar-slot umami-tool-button,
+umami-tool-button[data-host-orientation="horizontal"] {
+    width: auto;
+    text-align: initial;
+}
+
+.app-plugin-bar umami-tool-button {
+    width: 100%;
+    text-align: center;
+}
+
+umami-tool-button .umami-tool {
+    display: inline-flex;
+    width: 100%;
+    justify-content: center;
+}
+
+.app-toolbar-slot umami-tool-button .umami-tool,
+umami-tool-button[data-host-orientation="horizontal"] .umami-tool {
+    width: auto;
+}

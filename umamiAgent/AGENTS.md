@@ -17,6 +17,7 @@ Read `docs/index.html`, `docs/specs/matrix.md`, and `docs/specs/DS001-coding-sty
 - The manifest omits `network` so Ploinky assigns the isolated per-agent default network; the embedded services communicate over container loopback and do not need a shared network or custom alias.
 - PostgreSQL data persists in the agent root storage at `/root/postgres`, mapped by Ploinky to the workspace `.data` area.
 - The MCP implementation runs `MadsNyl/umami-mcp` internally as an HTTP MCP server on `127.0.0.1:${UMAMI_MCP_PORT:-7301}`; do not expose that upstream MCP server directly to Ploinky.
+- `IDE-plugins/umami-tool-button/` adds the `Umami` file-explorer toolbar button, which registers `umami-settings` through the Explorer settings-component loader and opens it as a fullscreen component panel (`openExpandedModal`, mode `component`); embedded there, the component hides its own modal header. That modal's `Open Dashboard` button opens `/base-agent-additional-server/umamiAgent/3000/websites` in a new tab.
 - `IDE-plugins/umami-settings/` registers the AchillesIDE `Umami Settings` settings modal and generates browser snippets for Umami's public `/script.js`.
 
 ## Security
@@ -33,6 +34,6 @@ Read-only applies to upstream Umami data. `umami_report_generate` may write a lo
 
 ## Local Setup
 
-Starting `umamiAgent` should not enable separate Umami infrastructure agents. Ploinky generates the PostgreSQL and Umami app secrets for this single agent.
+Starting `umamiAgent` should not enable separate Umami infrastructure agents. Ploinky generates the Umami app and MCP secrets for this single agent. PostgreSQL uses fixed loopback-only credentials (`admin` / `admin` by default, overridable through `POSTGRES_USER` / `POSTGRES_PASSWORD`) that the start script re-applies to the existing data directory on every start, so the database survives a recreated workspace master key.
 
 Default Umami login from upstream is `admin` / `umami`. Change it after first login, then configure `UMAMI_PASSWORD` for the read-only MCP adapter OAuth bootstrap.
