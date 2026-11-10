@@ -18,7 +18,7 @@ function fixture(t) {
     const metadataFile = path.join(app, 'ploinky-umami-build.json');
     const configFile = path.join(app, '.next/required-server-files.json');
     fs.writeFileSync(metadataFile, JSON.stringify({
-        schema: 'ploinky.umami-build/v1', version: '3.2.0', sourceCommit: 'a'.repeat(40), basePath,
+        schema: 'ploinky.umami-build/v1', version: '3.4.1', sourceCommit: 'a'.repeat(40), basePath,
     }));
     fs.writeFileSync(configFile, JSON.stringify({ config: { basePath } }));
     const code = path.join(root, 'code');

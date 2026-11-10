@@ -12,7 +12,7 @@ export function verifyUmamiBuild(appDirectory = '/app') {
     const build = JSON.parse(fs.readFileSync(path.join(appDirectory, 'ploinky-umami-build.json'), 'utf8'));
     const config = JSON.parse(fs.readFileSync(path.join(appDirectory, '.next/required-server-files.json'), 'utf8')).config;
     if (build.schema !== 'ploinky.umami-build/v1'
-        || build.version !== '3.2.0'
+        || build.version !== '3.4.1'
         || !/^[0-9a-f]{40}$/.test(build.sourceCommit || '')
         || build.basePath !== UMAMI_BASE_PATH
         || config?.basePath !== UMAMI_BASE_PATH) {
@@ -60,7 +60,7 @@ export function trackerCorsHeaders(headers, origin) {
         ...result,
         'access-control-allow-origin': normalizedOrigin,
         'access-control-allow-methods': 'POST, OPTIONS',
-        'access-control-allow-headers': 'content-type',
+        'access-control-allow-headers': 'content-type, x-umami-website-id, x-umami-hostname, x-umami-cache',
         'access-control-max-age': '600',
         vary: vary.join(', '),
     };
@@ -73,6 +73,49 @@ export function upstreamPath(url) {
     // Next's base-path root has no trailing slash. Avoid a redirect loop when
     // Router maps both the published root and its slash form to upstream '/'.
     return UMAMI_BASE_PATH + (url === '/' ? '' : url.startsWith('/?') ? url.slice(1) : url);
+}
+
+// Umami's built-in MCP endpoint is for in-container callers only. Resolve the
+// target before comparing: WHATWG URL parsing removes the query and resolves
+// dot segments and %2e, then each segment is percent-decoded (repeatedly, with
+// decoded separators treated as separators) and compared case-insensitively.
+// The check errs toward blocking, so no spelling reaches /mcp through the
+// Router.
+export const UMAMI_MCP_PATH = `${UMAMI_BASE_PATH}/mcp`;
+
+function resolvedSegments(pathname) {
+    const resolved = [];
+    for (const raw of pathname.split('/')) {
+        let segment = raw;
+        for (let pass = 0; pass < 3; pass += 1) {
+            let decoded;
+            try {
+                decoded = decodeURIComponent(segment);
+            } catch {
+                break;
+            }
+            if (decoded === segment) break;
+            segment = decoded;
+        }
+        for (const part of segment.split(/[\\/]/)) {
+            if (part === '' || part === '.') continue;
+            if (part === '..') resolved.pop();
+            else resolved.push(part.toLowerCase());
+        }
+    }
+    return resolved;
+}
+
+export function isMcpPath(url) {
+    let pathname;
+    try {
+        pathname = new URL(upstreamPath(url), 'http://umami.invalid').pathname;
+    } catch {
+        return false;
+    }
+    const segments = resolvedSegments(pathname);
+    const mcp = resolvedSegments(UMAMI_MCP_PATH);
+    return mcp.every((segment, index) => segments[index] === segment) && segments.length >= mcp.length;
 }
 
 export function createUmamiIngress({ upstreamPort = UMAMI_UPSTREAM_PORT } = {}) {
@@ -89,6 +132,11 @@ export function createUmamiIngress({ upstreamPort = UMAMI_UPSTREAM_PORT } = {}) 
         } catch {
             response.writeHead(400, { 'content-type': 'text/plain', 'cache-control': 'no-store' });
             response.end('Invalid Umami request target.');
+            return;
+        }
+        if (prefix !== undefined && isMcpPath(request.url)) {
+            response.writeHead(404, { 'content-type': 'text/plain', 'cache-control': 'no-store' });
+            response.end('Not found.');
             return;
         }
         const upstream = http.request({

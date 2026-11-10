@@ -3,7 +3,7 @@
     {
       "name": "umami_websites_list",
       "title": "Umami Websites List",
-      "description": "List Umami websites visible to the configured read-only Umami credentials.",
+      "description": "List Umami websites visible to the agent's internal read-only API key.",
       "command": "tools/umami_tool.sh",
       "cwd": "/code",
       "timeoutMs": 60000,
@@ -140,6 +140,909 @@
       "env": {
         "UMAMI_ACTION": "report_generate"
       }
+    },
+    {
+      "name": "umami_website_daterange",
+      "title": "Umami Website Date Range",
+      "description": "Get the earliest and latest timestamps with recorded data for a website.",
+      "command": "tools/umami_tool.sh",
+      "cwd": "/code",
+      "timeoutMs": 60000,
+      "inputSchema": {
+        "websiteId": {
+          "type": "string",
+          "optional": true,
+          "description": "Website ID from umami_websites_list. Defaults to UMAMI_DEFAULT_WEBSITE_ID."
+        }
+      },
+      "env": { "UMAMI_ACTION": "website_daterange" }
+    },
+    {
+      "name": "umami_event_stats",
+      "title": "Umami Event Stats",
+      "description": "Get custom event totals (events, visitors, visits, distinct names) for a website and range, with a comparison period.",
+      "command": "tools/umami_tool.sh",
+      "cwd": "/code",
+      "timeoutMs": 60000,
+      "inputSchema": {
+        "websiteId": {
+          "type": "string",
+          "optional": true,
+          "description": "Website ID from umami_websites_list. Defaults to UMAMI_DEFAULT_WEBSITE_ID."
+        },
+        "startAt": {
+          "type": "number",
+          "optional": false,
+          "description": "Start of the range in epoch milliseconds."
+        },
+        "endAt": {
+          "type": "number",
+          "optional": true,
+          "description": "End of the range in epoch milliseconds. Defaults to now."
+        },
+        "compare": {
+          "type": "string",
+          "optional": true,
+          "description": "Comparison period: prev (default) or yoy.",
+          "enum": [ "prev", "yoy" ]
+        },
+        "filters": {
+          "type": "object",
+          "optional": true,
+          "description": "Optional analytics filters; include only keys to filter on. Keys: path, referrer, title, query, hostname, event, tag, browser, os, device, country, region, city, language, distinctId, utmSource, utmMedium, utmCampaign, utmContent, utmTerm, segment, cohort, match. Values are exact matches by default; prefix a value with neq., c., dnc., re. or nre. for not-equals, contains, does-not-contain, regex or not-regex, and comma-separate several exact values. segment and cohort take saved IDs from umami_segments_list; match is all (default) or any.",
+          "properties": {
+            "path": { "type": "string", "optional": true },
+            "referrer": { "type": "string", "optional": true },
+            "title": { "type": "string", "optional": true },
+            "query": { "type": "string", "optional": true },
+            "hostname": { "type": "string", "optional": true },
+            "event": { "type": "string", "optional": true },
+            "tag": { "type": "string", "optional": true },
+            "browser": { "type": "string", "optional": true },
+            "os": { "type": "string", "optional": true },
+            "device": { "type": "string", "optional": true },
+            "country": { "type": "string", "optional": true },
+            "region": { "type": "string", "optional": true },
+            "city": { "type": "string", "optional": true },
+            "language": { "type": "string", "optional": true },
+            "distinctId": { "type": "string", "optional": true },
+            "utmSource": { "type": "string", "optional": true },
+            "utmMedium": { "type": "string", "optional": true },
+            "utmCampaign": { "type": "string", "optional": true },
+            "utmContent": { "type": "string", "optional": true },
+            "utmTerm": { "type": "string", "optional": true },
+            "segment": { "type": "string", "optional": true },
+            "cohort": { "type": "string", "optional": true },
+            "match": { "type": "string", "optional": true, "enum": [ "all", "any" ] }
+          }
+        }
+      },
+      "env": { "UMAMI_ACTION": "event_stats" }
+    },
+    {
+      "name": "umami_event_series",
+      "title": "Umami Event Series",
+      "description": "Get custom event counts over time, grouped by event name.",
+      "command": "tools/umami_tool.sh",
+      "cwd": "/code",
+      "timeoutMs": 60000,
+      "inputSchema": {
+        "websiteId": {
+          "type": "string",
+          "optional": true,
+          "description": "Website ID from umami_websites_list. Defaults to UMAMI_DEFAULT_WEBSITE_ID."
+        },
+        "startAt": {
+          "type": "number",
+          "optional": false,
+          "description": "Start of the range in epoch milliseconds."
+        },
+        "endAt": {
+          "type": "number",
+          "optional": true,
+          "description": "End of the range in epoch milliseconds. Defaults to now."
+        },
+        "unit": {
+          "type": "string",
+          "optional": true,
+          "description": "Bucket size for time series.",
+          "enum": [ "minute", "hour", "day", "month", "year" ]
+        },
+        "timezone": {
+          "type": "string",
+          "optional": true,
+          "description": "IANA timezone such as \"America/Los_Angeles\". Defaults to UTC."
+        },
+        "limit": {
+          "type": "number",
+          "optional": true,
+          "description": "Maximum number of event names (default 20, max 500)."
+        },
+        "filters": {
+          "type": "object",
+          "optional": true,
+          "description": "Optional analytics filters; include only keys to filter on. Keys: path, referrer, title, query, hostname, event, tag, browser, os, device, country, region, city, language, distinctId, utmSource, utmMedium, utmCampaign, utmContent, utmTerm, segment, cohort, match. Values are exact matches by default; prefix a value with neq., c., dnc., re. or nre. for not-equals, contains, does-not-contain, regex or not-regex, and comma-separate several exact values. segment and cohort take saved IDs from umami_segments_list; match is all (default) or any.",
+          "properties": {
+            "path": { "type": "string", "optional": true },
+            "referrer": { "type": "string", "optional": true },
+            "title": { "type": "string", "optional": true },
+            "query": { "type": "string", "optional": true },
+            "hostname": { "type": "string", "optional": true },
+            "event": { "type": "string", "optional": true },
+            "tag": { "type": "string", "optional": true },
+            "browser": { "type": "string", "optional": true },
+            "os": { "type": "string", "optional": true },
+            "device": { "type": "string", "optional": true },
+            "country": { "type": "string", "optional": true },
+            "region": { "type": "string", "optional": true },
+            "city": { "type": "string", "optional": true },
+            "language": { "type": "string", "optional": true },
+            "distinctId": { "type": "string", "optional": true },
+            "utmSource": { "type": "string", "optional": true },
+            "utmMedium": { "type": "string", "optional": true },
+            "utmCampaign": { "type": "string", "optional": true },
+            "utmContent": { "type": "string", "optional": true },
+            "utmTerm": { "type": "string", "optional": true },
+            "segment": { "type": "string", "optional": true },
+            "cohort": { "type": "string", "optional": true },
+            "match": { "type": "string", "optional": true, "enum": [ "all", "any" ] }
+          }
+        }
+      },
+      "env": { "UMAMI_ACTION": "event_series" }
+    },
+    {
+      "name": "umami_event_properties",
+      "title": "Umami Event Properties",
+      "description": "List custom event property names, or the values of one property ranked by frequency.",
+      "command": "tools/umami_tool.sh",
+      "cwd": "/code",
+      "timeoutMs": 60000,
+      "inputSchema": {
+        "websiteId": {
+          "type": "string",
+          "optional": true,
+          "description": "Website ID from umami_websites_list. Defaults to UMAMI_DEFAULT_WEBSITE_ID."
+        },
+        "startAt": {
+          "type": "number",
+          "optional": false,
+          "description": "Start of the range in epoch milliseconds."
+        },
+        "endAt": {
+          "type": "number",
+          "optional": true,
+          "description": "End of the range in epoch milliseconds. Defaults to now."
+        },
+        "propertyName": {
+          "type": "string",
+          "optional": true,
+          "description": "Property to get values for. Omit to list available properties."
+        },
+        "eventName": {
+          "type": "string",
+          "optional": true,
+          "description": "Only consider this custom event name."
+        },
+        "dataType": {
+          "type": "string",
+          "optional": true,
+          "description": "Restrict to properties of this data type.",
+          "enum": [ "string", "number", "boolean", "date", "array" ]
+        },
+        "filters": {
+          "type": "object",
+          "optional": true,
+          "description": "Optional analytics filters; include only keys to filter on. Keys: path, referrer, title, query, hostname, event, tag, browser, os, device, country, region, city, language, distinctId, utmSource, utmMedium, utmCampaign, utmContent, utmTerm, segment, cohort, match. Values are exact matches by default; prefix a value with neq., c., dnc., re. or nre. for not-equals, contains, does-not-contain, regex or not-regex, and comma-separate several exact values. segment and cohort take saved IDs from umami_segments_list; match is all (default) or any.",
+          "properties": {
+            "path": { "type": "string", "optional": true },
+            "referrer": { "type": "string", "optional": true },
+            "title": { "type": "string", "optional": true },
+            "query": { "type": "string", "optional": true },
+            "hostname": { "type": "string", "optional": true },
+            "event": { "type": "string", "optional": true },
+            "tag": { "type": "string", "optional": true },
+            "browser": { "type": "string", "optional": true },
+            "os": { "type": "string", "optional": true },
+            "device": { "type": "string", "optional": true },
+            "country": { "type": "string", "optional": true },
+            "region": { "type": "string", "optional": true },
+            "city": { "type": "string", "optional": true },
+            "language": { "type": "string", "optional": true },
+            "distinctId": { "type": "string", "optional": true },
+            "utmSource": { "type": "string", "optional": true },
+            "utmMedium": { "type": "string", "optional": true },
+            "utmCampaign": { "type": "string", "optional": true },
+            "utmContent": { "type": "string", "optional": true },
+            "utmTerm": { "type": "string", "optional": true },
+            "segment": { "type": "string", "optional": true },
+            "cohort": { "type": "string", "optional": true },
+            "match": { "type": "string", "optional": true, "enum": [ "all", "any" ] }
+          }
+        }
+      },
+      "env": { "UMAMI_ACTION": "event_properties" }
+    },
+    {
+      "name": "umami_session_stats",
+      "title": "Umami Session Stats",
+      "description": "Get session-level totals (visitors, visits, pageviews, events, countries) for a website and range.",
+      "command": "tools/umami_tool.sh",
+      "cwd": "/code",
+      "timeoutMs": 60000,
+      "inputSchema": {
+        "websiteId": {
+          "type": "string",
+          "optional": true,
+          "description": "Website ID from umami_websites_list. Defaults to UMAMI_DEFAULT_WEBSITE_ID."
+        },
+        "startAt": {
+          "type": "number",
+          "optional": false,
+          "description": "Start of the range in epoch milliseconds."
+        },
+        "endAt": {
+          "type": "number",
+          "optional": true,
+          "description": "End of the range in epoch milliseconds. Defaults to now."
+        },
+        "filters": {
+          "type": "object",
+          "optional": true,
+          "description": "Optional analytics filters; include only keys to filter on. Keys: path, referrer, title, query, hostname, event, tag, browser, os, device, country, region, city, language, distinctId, utmSource, utmMedium, utmCampaign, utmContent, utmTerm, segment, cohort, match. Values are exact matches by default; prefix a value with neq., c., dnc., re. or nre. for not-equals, contains, does-not-contain, regex or not-regex, and comma-separate several exact values. segment and cohort take saved IDs from umami_segments_list; match is all (default) or any.",
+          "properties": {
+            "path": { "type": "string", "optional": true },
+            "referrer": { "type": "string", "optional": true },
+            "title": { "type": "string", "optional": true },
+            "query": { "type": "string", "optional": true },
+            "hostname": { "type": "string", "optional": true },
+            "event": { "type": "string", "optional": true },
+            "tag": { "type": "string", "optional": true },
+            "browser": { "type": "string", "optional": true },
+            "os": { "type": "string", "optional": true },
+            "device": { "type": "string", "optional": true },
+            "country": { "type": "string", "optional": true },
+            "region": { "type": "string", "optional": true },
+            "city": { "type": "string", "optional": true },
+            "language": { "type": "string", "optional": true },
+            "distinctId": { "type": "string", "optional": true },
+            "utmSource": { "type": "string", "optional": true },
+            "utmMedium": { "type": "string", "optional": true },
+            "utmCampaign": { "type": "string", "optional": true },
+            "utmContent": { "type": "string", "optional": true },
+            "utmTerm": { "type": "string", "optional": true },
+            "segment": { "type": "string", "optional": true },
+            "cohort": { "type": "string", "optional": true },
+            "match": { "type": "string", "optional": true, "enum": [ "all", "any" ] }
+          }
+        }
+      },
+      "env": { "UMAMI_ACTION": "session_stats" }
+    },
+    {
+      "name": "umami_session_get",
+      "title": "Umami Session Get",
+      "description": "Get full details for one visitor session, including its activity timeline.",
+      "command": "tools/umami_tool.sh",
+      "cwd": "/code",
+      "timeoutMs": 60000,
+      "inputSchema": {
+        "websiteId": {
+          "type": "string",
+          "optional": true,
+          "description": "Website ID from umami_websites_list. Defaults to UMAMI_DEFAULT_WEBSITE_ID."
+        },
+        "sessionId": {
+          "type": "string",
+          "optional": false,
+          "description": "Session ID from umami_sessions_get or umami_events_list."
+        },
+        "includeActivity": {
+          "type": "boolean",
+          "optional": true,
+          "description": "Include the pageview/event timeline (default true)."
+        }
+      },
+      "env": { "UMAMI_ACTION": "session_get" }
+    },
+    {
+      "name": "umami_annotations_list",
+      "title": "Umami Annotations List",
+      "description": "List dated notes on a website timeline, optionally within a range.",
+      "command": "tools/umami_tool.sh",
+      "cwd": "/code",
+      "timeoutMs": 60000,
+      "inputSchema": {
+        "websiteId": {
+          "type": "string",
+          "optional": true,
+          "description": "Website ID from umami_websites_list. Defaults to UMAMI_DEFAULT_WEBSITE_ID."
+        },
+        "startAt": {
+          "type": "number",
+          "optional": true,
+          "description": "Start of the range in epoch milliseconds."
+        },
+        "endAt": {
+          "type": "number",
+          "optional": true,
+          "description": "End of the range in epoch milliseconds. Defaults to now."
+        },
+        "search": { "type": "string", "optional": true, "description": "Free-text filter on the note text." },
+        "page": { "type": "number", "optional": true, "description": "Page number, starting at 1." },
+        "pageSize": {
+          "type": "number",
+          "optional": true,
+          "description": "Results per page (default 20, max 100)."
+        }
+      },
+      "env": { "UMAMI_ACTION": "annotations_list" }
+    },
+    {
+      "name": "umami_segments_list",
+      "title": "Umami Segments List",
+      "description": "List saved segments and cohorts for a website with their IDs and definitions.",
+      "command": "tools/umami_tool.sh",
+      "cwd": "/code",
+      "timeoutMs": 60000,
+      "inputSchema": {
+        "websiteId": {
+          "type": "string",
+          "optional": true,
+          "description": "Website ID from umami_websites_list. Defaults to UMAMI_DEFAULT_WEBSITE_ID."
+        },
+        "type": {
+          "type": "string",
+          "optional": true,
+          "description": "Which kind to list. Defaults to both.",
+          "enum": [ "segment", "cohort" ]
+        },
+        "search": { "type": "string", "optional": true, "description": "Free-text filter on the name." }
+      },
+      "env": { "UMAMI_ACTION": "segments_list" }
+    },
+    {
+      "name": "umami_funnels_list",
+      "title": "Umami Funnels List",
+      "description": "List saved funnel reports for a website with their steps.",
+      "command": "tools/umami_tool.sh",
+      "cwd": "/code",
+      "timeoutMs": 60000,
+      "inputSchema": {
+        "websiteId": {
+          "type": "string",
+          "optional": true,
+          "description": "Website ID from umami_websites_list. Defaults to UMAMI_DEFAULT_WEBSITE_ID."
+        },
+        "search": {
+          "type": "string",
+          "optional": true,
+          "description": "Free-text filter on name or description."
+        },
+        "page": { "type": "number", "optional": true, "description": "Page number, starting at 1." },
+        "pageSize": {
+          "type": "number",
+          "optional": true,
+          "description": "Results per page (default 20, max 100)."
+        }
+      },
+      "env": { "UMAMI_ACTION": "funnels_list" }
+    },
+    {
+      "name": "umami_funnel_run",
+      "title": "Umami Funnel Run",
+      "description": "Calculate conversion through a saved funnel (funnelId) or ad-hoc ordered steps (2 to 8).",
+      "command": "tools/umami_tool.sh",
+      "cwd": "/code",
+      "timeoutMs": 60000,
+      "inputSchema": {
+        "websiteId": {
+          "type": "string",
+          "optional": true,
+          "description": "Website ID from umami_websites_list. Defaults to UMAMI_DEFAULT_WEBSITE_ID."
+        },
+        "startAt": {
+          "type": "number",
+          "optional": false,
+          "description": "Start of the range in epoch milliseconds."
+        },
+        "endAt": {
+          "type": "number",
+          "optional": true,
+          "description": "End of the range in epoch milliseconds. Defaults to now."
+        },
+        "funnelId": {
+          "type": "string",
+          "optional": true,
+          "description": "ID of a saved funnel from umami_funnels_list. Give either funnelId or steps."
+        },
+        "steps": {
+          "type": "array",
+          "optional": true,
+          "description": "Ordered funnel steps (2 to 8). Give either funnelId or steps.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "optional": false,
+                "description": "path for a page path, event for a custom event name.",
+                "enum": [ "path", "event" ]
+              },
+              "value": {
+                "type": "string",
+                "optional": false,
+                "description": "The page path or event name. Use * as a wildcard."
+              }
+            }
+          }
+        },
+        "windowMinutes": {
+          "type": "number",
+          "optional": true,
+          "description": "Maximum minutes between the first and each following step (default 60). Ignored with funnelId."
+        },
+        "filters": {
+          "type": "object",
+          "optional": true,
+          "description": "Optional analytics filters; include only keys to filter on. Keys: path, referrer, title, query, hostname, event, tag, browser, os, device, country, region, city, language, distinctId, utmSource, utmMedium, utmCampaign, utmContent, utmTerm, segment, cohort, match. Values are exact matches by default; prefix a value with neq., c., dnc., re. or nre. for not-equals, contains, does-not-contain, regex or not-regex, and comma-separate several exact values. segment and cohort take saved IDs from umami_segments_list; match is all (default) or any.",
+          "properties": {
+            "path": { "type": "string", "optional": true },
+            "referrer": { "type": "string", "optional": true },
+            "title": { "type": "string", "optional": true },
+            "query": { "type": "string", "optional": true },
+            "hostname": { "type": "string", "optional": true },
+            "event": { "type": "string", "optional": true },
+            "tag": { "type": "string", "optional": true },
+            "browser": { "type": "string", "optional": true },
+            "os": { "type": "string", "optional": true },
+            "device": { "type": "string", "optional": true },
+            "country": { "type": "string", "optional": true },
+            "region": { "type": "string", "optional": true },
+            "city": { "type": "string", "optional": true },
+            "language": { "type": "string", "optional": true },
+            "distinctId": { "type": "string", "optional": true },
+            "utmSource": { "type": "string", "optional": true },
+            "utmMedium": { "type": "string", "optional": true },
+            "utmCampaign": { "type": "string", "optional": true },
+            "utmContent": { "type": "string", "optional": true },
+            "utmTerm": { "type": "string", "optional": true },
+            "segment": { "type": "string", "optional": true },
+            "cohort": { "type": "string", "optional": true },
+            "match": { "type": "string", "optional": true, "enum": [ "all", "any" ] }
+          }
+        }
+      },
+      "env": { "UMAMI_ACTION": "funnel_run" }
+    },
+    {
+      "name": "umami_goals_get",
+      "title": "Umami Goals Get",
+      "description": "List saved goals for a website; with startAt, also compute conversions for the range.",
+      "command": "tools/umami_tool.sh",
+      "cwd": "/code",
+      "timeoutMs": 60000,
+      "inputSchema": {
+        "websiteId": {
+          "type": "string",
+          "optional": true,
+          "description": "Website ID from umami_websites_list. Defaults to UMAMI_DEFAULT_WEBSITE_ID."
+        },
+        "startAt": {
+          "type": "number",
+          "optional": true,
+          "description": "Start of the range in epoch milliseconds."
+        },
+        "endAt": {
+          "type": "number",
+          "optional": true,
+          "description": "End of the range in epoch milliseconds. Defaults to now."
+        },
+        "goalId": { "type": "string", "optional": true, "description": "Only return this goal." },
+        "search": {
+          "type": "string",
+          "optional": true,
+          "description": "Free-text filter on goal name or description."
+        },
+        "page": { "type": "number", "optional": true, "description": "Page number, starting at 1." },
+        "pageSize": {
+          "type": "number",
+          "optional": true,
+          "description": "Results per page (default 20, max 100)."
+        },
+        "filters": {
+          "type": "object",
+          "optional": true,
+          "description": "Optional analytics filters; include only keys to filter on. Keys: path, referrer, title, query, hostname, event, tag, browser, os, device, country, region, city, language, distinctId, utmSource, utmMedium, utmCampaign, utmContent, utmTerm, segment, cohort, match. Values are exact matches by default; prefix a value with neq., c., dnc., re. or nre. for not-equals, contains, does-not-contain, regex or not-regex, and comma-separate several exact values. segment and cohort take saved IDs from umami_segments_list; match is all (default) or any.",
+          "properties": {
+            "path": { "type": "string", "optional": true },
+            "referrer": { "type": "string", "optional": true },
+            "title": { "type": "string", "optional": true },
+            "query": { "type": "string", "optional": true },
+            "hostname": { "type": "string", "optional": true },
+            "event": { "type": "string", "optional": true },
+            "tag": { "type": "string", "optional": true },
+            "browser": { "type": "string", "optional": true },
+            "os": { "type": "string", "optional": true },
+            "device": { "type": "string", "optional": true },
+            "country": { "type": "string", "optional": true },
+            "region": { "type": "string", "optional": true },
+            "city": { "type": "string", "optional": true },
+            "language": { "type": "string", "optional": true },
+            "distinctId": { "type": "string", "optional": true },
+            "utmSource": { "type": "string", "optional": true },
+            "utmMedium": { "type": "string", "optional": true },
+            "utmCampaign": { "type": "string", "optional": true },
+            "utmContent": { "type": "string", "optional": true },
+            "utmTerm": { "type": "string", "optional": true },
+            "segment": { "type": "string", "optional": true },
+            "cohort": { "type": "string", "optional": true },
+            "match": { "type": "string", "optional": true, "enum": [ "all", "any" ] }
+          }
+        }
+      },
+      "env": { "UMAMI_ACTION": "goals_get" }
+    },
+    {
+      "name": "umami_journey_run",
+      "title": "Umami Journey Run",
+      "description": "Get the most common visitor paths (2 to 7 steps), optionally anchored on a start or end step.",
+      "command": "tools/umami_tool.sh",
+      "cwd": "/code",
+      "timeoutMs": 60000,
+      "inputSchema": {
+        "websiteId": {
+          "type": "string",
+          "optional": true,
+          "description": "Website ID from umami_websites_list. Defaults to UMAMI_DEFAULT_WEBSITE_ID."
+        },
+        "startAt": {
+          "type": "number",
+          "optional": false,
+          "description": "Start of the range in epoch milliseconds."
+        },
+        "endAt": {
+          "type": "number",
+          "optional": true,
+          "description": "End of the range in epoch milliseconds. Defaults to now."
+        },
+        "steps": {
+          "type": "number",
+          "optional": true,
+          "description": "Number of steps per journey, 2 to 7 (default 3)."
+        },
+        "startStep": {
+          "type": "string",
+          "optional": true,
+          "description": "Only journeys starting with this page path or event."
+        },
+        "endStep": {
+          "type": "string",
+          "optional": true,
+          "description": "Only journeys ending with this page path or event."
+        },
+        "filters": {
+          "type": "object",
+          "optional": true,
+          "description": "Optional analytics filters; include only keys to filter on. Keys: path, referrer, title, query, hostname, event, tag, browser, os, device, country, region, city, language, distinctId, utmSource, utmMedium, utmCampaign, utmContent, utmTerm, segment, cohort, match. Values are exact matches by default; prefix a value with neq., c., dnc., re. or nre. for not-equals, contains, does-not-contain, regex or not-regex, and comma-separate several exact values. segment and cohort take saved IDs from umami_segments_list; match is all (default) or any.",
+          "properties": {
+            "path": { "type": "string", "optional": true },
+            "referrer": { "type": "string", "optional": true },
+            "title": { "type": "string", "optional": true },
+            "query": { "type": "string", "optional": true },
+            "hostname": { "type": "string", "optional": true },
+            "event": { "type": "string", "optional": true },
+            "tag": { "type": "string", "optional": true },
+            "browser": { "type": "string", "optional": true },
+            "os": { "type": "string", "optional": true },
+            "device": { "type": "string", "optional": true },
+            "country": { "type": "string", "optional": true },
+            "region": { "type": "string", "optional": true },
+            "city": { "type": "string", "optional": true },
+            "language": { "type": "string", "optional": true },
+            "distinctId": { "type": "string", "optional": true },
+            "utmSource": { "type": "string", "optional": true },
+            "utmMedium": { "type": "string", "optional": true },
+            "utmCampaign": { "type": "string", "optional": true },
+            "utmContent": { "type": "string", "optional": true },
+            "utmTerm": { "type": "string", "optional": true },
+            "segment": { "type": "string", "optional": true },
+            "cohort": { "type": "string", "optional": true },
+            "match": { "type": "string", "optional": true, "enum": [ "all", "any" ] }
+          }
+        }
+      },
+      "env": { "UMAMI_ACTION": "journey_run" }
+    },
+    {
+      "name": "umami_retention_run",
+      "title": "Umami Retention Run",
+      "description": "Get a cohort retention table for a website and range.",
+      "command": "tools/umami_tool.sh",
+      "cwd": "/code",
+      "timeoutMs": 60000,
+      "inputSchema": {
+        "websiteId": {
+          "type": "string",
+          "optional": true,
+          "description": "Website ID from umami_websites_list. Defaults to UMAMI_DEFAULT_WEBSITE_ID."
+        },
+        "startAt": {
+          "type": "number",
+          "optional": false,
+          "description": "Start of the range in epoch milliseconds."
+        },
+        "endAt": {
+          "type": "number",
+          "optional": true,
+          "description": "End of the range in epoch milliseconds. Defaults to now."
+        },
+        "timezone": {
+          "type": "string",
+          "optional": true,
+          "description": "IANA timezone such as \"America/Los_Angeles\". Defaults to UTC."
+        },
+        "filters": {
+          "type": "object",
+          "optional": true,
+          "description": "Optional analytics filters; include only keys to filter on. Keys: path, referrer, title, query, hostname, event, tag, browser, os, device, country, region, city, language, distinctId, utmSource, utmMedium, utmCampaign, utmContent, utmTerm, segment, cohort, match. Values are exact matches by default; prefix a value with neq., c., dnc., re. or nre. for not-equals, contains, does-not-contain, regex or not-regex, and comma-separate several exact values. segment and cohort take saved IDs from umami_segments_list; match is all (default) or any.",
+          "properties": {
+            "path": { "type": "string", "optional": true },
+            "referrer": { "type": "string", "optional": true },
+            "title": { "type": "string", "optional": true },
+            "query": { "type": "string", "optional": true },
+            "hostname": { "type": "string", "optional": true },
+            "event": { "type": "string", "optional": true },
+            "tag": { "type": "string", "optional": true },
+            "browser": { "type": "string", "optional": true },
+            "os": { "type": "string", "optional": true },
+            "device": { "type": "string", "optional": true },
+            "country": { "type": "string", "optional": true },
+            "region": { "type": "string", "optional": true },
+            "city": { "type": "string", "optional": true },
+            "language": { "type": "string", "optional": true },
+            "distinctId": { "type": "string", "optional": true },
+            "utmSource": { "type": "string", "optional": true },
+            "utmMedium": { "type": "string", "optional": true },
+            "utmCampaign": { "type": "string", "optional": true },
+            "utmContent": { "type": "string", "optional": true },
+            "utmTerm": { "type": "string", "optional": true },
+            "segment": { "type": "string", "optional": true },
+            "cohort": { "type": "string", "optional": true },
+            "match": { "type": "string", "optional": true, "enum": [ "all", "any" ] }
+          }
+        }
+      },
+      "env": { "UMAMI_ACTION": "retention_run" }
+    },
+    {
+      "name": "umami_attribution_run",
+      "title": "Umami Attribution Run",
+      "description": "Attribute conversions (a page path or custom event) to referrers, UTM sources and campaigns.",
+      "command": "tools/umami_tool.sh",
+      "cwd": "/code",
+      "timeoutMs": 60000,
+      "inputSchema": {
+        "websiteId": {
+          "type": "string",
+          "optional": true,
+          "description": "Website ID from umami_websites_list. Defaults to UMAMI_DEFAULT_WEBSITE_ID."
+        },
+        "startAt": {
+          "type": "number",
+          "optional": false,
+          "description": "Start of the range in epoch milliseconds."
+        },
+        "endAt": {
+          "type": "number",
+          "optional": true,
+          "description": "End of the range in epoch milliseconds. Defaults to now."
+        },
+        "model": {
+          "type": "string",
+          "optional": true,
+          "description": "Attribution model (default last-click).",
+          "enum": [ "first-click", "last-click" ]
+        },
+        "conversionType": {
+          "type": "string",
+          "optional": false,
+          "description": "Whether the conversion is a page path or a custom event.",
+          "enum": [ "path", "event" ]
+        },
+        "conversion": {
+          "type": "string",
+          "optional": false,
+          "description": "The conversion page path or event name."
+        },
+        "filters": {
+          "type": "object",
+          "optional": true,
+          "description": "Optional analytics filters; include only keys to filter on. Keys: path, referrer, title, query, hostname, event, tag, browser, os, device, country, region, city, language, distinctId, utmSource, utmMedium, utmCampaign, utmContent, utmTerm, segment, cohort, match. Values are exact matches by default; prefix a value with neq., c., dnc., re. or nre. for not-equals, contains, does-not-contain, regex or not-regex, and comma-separate several exact values. segment and cohort take saved IDs from umami_segments_list; match is all (default) or any.",
+          "properties": {
+            "path": { "type": "string", "optional": true },
+            "referrer": { "type": "string", "optional": true },
+            "title": { "type": "string", "optional": true },
+            "query": { "type": "string", "optional": true },
+            "hostname": { "type": "string", "optional": true },
+            "event": { "type": "string", "optional": true },
+            "tag": { "type": "string", "optional": true },
+            "browser": { "type": "string", "optional": true },
+            "os": { "type": "string", "optional": true },
+            "device": { "type": "string", "optional": true },
+            "country": { "type": "string", "optional": true },
+            "region": { "type": "string", "optional": true },
+            "city": { "type": "string", "optional": true },
+            "language": { "type": "string", "optional": true },
+            "distinctId": { "type": "string", "optional": true },
+            "utmSource": { "type": "string", "optional": true },
+            "utmMedium": { "type": "string", "optional": true },
+            "utmCampaign": { "type": "string", "optional": true },
+            "utmContent": { "type": "string", "optional": true },
+            "utmTerm": { "type": "string", "optional": true },
+            "segment": { "type": "string", "optional": true },
+            "cohort": { "type": "string", "optional": true },
+            "match": { "type": "string", "optional": true, "enum": [ "all", "any" ] }
+          }
+        }
+      },
+      "env": { "UMAMI_ACTION": "attribution_run" }
+    },
+    {
+      "name": "umami_revenue_get",
+      "title": "Umami Revenue Get",
+      "description": "Get tracked revenue totals, series and breakdowns for a website and range.",
+      "command": "tools/umami_tool.sh",
+      "cwd": "/code",
+      "timeoutMs": 60000,
+      "inputSchema": {
+        "websiteId": {
+          "type": "string",
+          "optional": true,
+          "description": "Website ID from umami_websites_list. Defaults to UMAMI_DEFAULT_WEBSITE_ID."
+        },
+        "startAt": {
+          "type": "number",
+          "optional": false,
+          "description": "Start of the range in epoch milliseconds."
+        },
+        "endAt": {
+          "type": "number",
+          "optional": true,
+          "description": "End of the range in epoch milliseconds. Defaults to now."
+        },
+        "currency": {
+          "type": "string",
+          "optional": true,
+          "description": "ISO 4217 currency code (default USD)."
+        },
+        "unit": {
+          "type": "string",
+          "optional": true,
+          "description": "Bucket size for time series.",
+          "enum": [ "minute", "hour", "day", "month", "year" ]
+        },
+        "timezone": {
+          "type": "string",
+          "optional": true,
+          "description": "IANA timezone such as \"America/Los_Angeles\". Defaults to UTC."
+        },
+        "filters": {
+          "type": "object",
+          "optional": true,
+          "description": "Optional analytics filters; include only keys to filter on. Keys: path, referrer, title, query, hostname, event, tag, browser, os, device, country, region, city, language, distinctId, utmSource, utmMedium, utmCampaign, utmContent, utmTerm, segment, cohort, match. Values are exact matches by default; prefix a value with neq., c., dnc., re. or nre. for not-equals, contains, does-not-contain, regex or not-regex, and comma-separate several exact values. segment and cohort take saved IDs from umami_segments_list; match is all (default) or any.",
+          "properties": {
+            "path": { "type": "string", "optional": true },
+            "referrer": { "type": "string", "optional": true },
+            "title": { "type": "string", "optional": true },
+            "query": { "type": "string", "optional": true },
+            "hostname": { "type": "string", "optional": true },
+            "event": { "type": "string", "optional": true },
+            "tag": { "type": "string", "optional": true },
+            "browser": { "type": "string", "optional": true },
+            "os": { "type": "string", "optional": true },
+            "device": { "type": "string", "optional": true },
+            "country": { "type": "string", "optional": true },
+            "region": { "type": "string", "optional": true },
+            "city": { "type": "string", "optional": true },
+            "language": { "type": "string", "optional": true },
+            "distinctId": { "type": "string", "optional": true },
+            "utmSource": { "type": "string", "optional": true },
+            "utmMedium": { "type": "string", "optional": true },
+            "utmCampaign": { "type": "string", "optional": true },
+            "utmContent": { "type": "string", "optional": true },
+            "utmTerm": { "type": "string", "optional": true },
+            "segment": { "type": "string", "optional": true },
+            "cohort": { "type": "string", "optional": true },
+            "match": { "type": "string", "optional": true, "enum": [ "all", "any" ] }
+          }
+        }
+      },
+      "env": { "UMAMI_ACTION": "revenue_get" }
+    },
+    {
+      "name": "umami_performance_get",
+      "title": "Umami Performance Get",
+      "description": "Get Core Web Vitals percentiles (LCP, INP, CLS, FCP, TTFB), optionally as a series or ranked by a dimension.",
+      "command": "tools/umami_tool.sh",
+      "cwd": "/code",
+      "timeoutMs": 60000,
+      "inputSchema": {
+        "websiteId": {
+          "type": "string",
+          "optional": true,
+          "description": "Website ID from umami_websites_list. Defaults to UMAMI_DEFAULT_WEBSITE_ID."
+        },
+        "startAt": {
+          "type": "number",
+          "optional": false,
+          "description": "Start of the range in epoch milliseconds."
+        },
+        "endAt": {
+          "type": "number",
+          "optional": true,
+          "description": "End of the range in epoch milliseconds. Defaults to now."
+        },
+        "metric": {
+          "type": "string",
+          "optional": true,
+          "description": "Metric for the series and breakdown (default lcp when breakdown is set).",
+          "enum": [ "lcp", "inp", "cls", "fcp", "ttfb" ]
+        },
+        "breakdown": {
+          "type": "string",
+          "optional": true,
+          "description": "Rank this dimension by the chosen metric.",
+          "enum": [ "path", "title", "device", "browser" ]
+        },
+        "limit": {
+          "type": "number",
+          "optional": true,
+          "description": "Rows in the breakdown (default 20, max 500)."
+        },
+        "unit": {
+          "type": "string",
+          "optional": true,
+          "description": "Bucket size for time series.",
+          "enum": [ "minute", "hour", "day", "month", "year" ]
+        },
+        "timezone": {
+          "type": "string",
+          "optional": true,
+          "description": "IANA timezone such as \"America/Los_Angeles\". Defaults to UTC."
+        },
+        "filters": {
+          "type": "object",
+          "optional": true,
+          "description": "Optional analytics filters; include only keys to filter on. Keys: path, referrer, title, query, hostname, event, tag, browser, os, device, country, region, city, language, distinctId, utmSource, utmMedium, utmCampaign, utmContent, utmTerm, segment, cohort, match. Values are exact matches by default; prefix a value with neq., c., dnc., re. or nre. for not-equals, contains, does-not-contain, regex or not-regex, and comma-separate several exact values. segment and cohort take saved IDs from umami_segments_list; match is all (default) or any.",
+          "properties": {
+            "path": { "type": "string", "optional": true },
+            "referrer": { "type": "string", "optional": true },
+            "title": { "type": "string", "optional": true },
+            "query": { "type": "string", "optional": true },
+            "hostname": { "type": "string", "optional": true },
+            "event": { "type": "string", "optional": true },
+            "tag": { "type": "string", "optional": true },
+            "browser": { "type": "string", "optional": true },
+            "os": { "type": "string", "optional": true },
+            "device": { "type": "string", "optional": true },
+            "country": { "type": "string", "optional": true },
+            "region": { "type": "string", "optional": true },
+            "city": { "type": "string", "optional": true },
+            "language": { "type": "string", "optional": true },
+            "distinctId": { "type": "string", "optional": true },
+            "utmSource": { "type": "string", "optional": true },
+            "utmMedium": { "type": "string", "optional": true },
+            "utmCampaign": { "type": "string", "optional": true },
+            "utmContent": { "type": "string", "optional": true },
+            "utmTerm": { "type": "string", "optional": true },
+            "segment": { "type": "string", "optional": true },
+            "cohort": { "type": "string", "optional": true },
+            "match": { "type": "string", "optional": true, "enum": [ "all", "any" ] }
+          }
+        }
+      },
+      "env": { "UMAMI_ACTION": "performance_get" }
     }
   ]
 }

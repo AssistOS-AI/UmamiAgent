@@ -1,5 +1,5 @@
 {
-  "container": "docker.io/assistos/umami-agent@sha256:d797b418dd13a6eb786cba4640656b6b1bc6e5da0467b98b5b8d335a250dd5a1",
+  "container": "docker.io/assistos/umami-agent@sha256:346a68283a88129f10c56ac940929dafbbf12f9b7cece3169d11d6a9f359ec93",
   "lite-sandbox": true,
   "agent": "sh /code/scripts/start-umami-agent.sh",
   "readiness": {
@@ -71,15 +71,14 @@
           "required": false,
           "default": "http://127.0.0.1:3000"
         },
-        "UMAMI_USERNAME": {
-          "required": false,
-          "default": "admin"
+        "UMAMI_INTERNAL_KEY_SEED": {
+          "required": true,
+          "generatedSecret": true
         },
-        "UMAMI_PASSWORD": {
-          "required": false,
-          "default": "umami"
+        "UMAMI_ADMIN_PASSWORD": {
+          "required": false
         },
-        "UMAMI_TOKEN": {
+        "UMAMI_SEED_WEBSITES": {
           "required": false
         },
         "UMAMI_DEFAULT_WEBSITE_ID": {
@@ -87,26 +86,6 @@
         },
         "UMAMI_TIMEZONE": {
           "required": false
-        },
-        "UMAMI_MCP_PORT": {
-          "required": false,
-          "default": "7301"
-        },
-        "MCP_SECRET": {
-          "name": "UMAMI_MCP_SECRET",
-          "required": true,
-          "sharedGeneratedSecret": true
-        },
-        "OAUTH_CLIENT_ID": {
-          "required": false,
-          "default": "umami-agent"
-        },
-        "OAUTH_REDIRECT_URI": {
-          "required": false
-        },
-        "UMAMI_MCP_SQLITE_PATH": {
-          "required": false,
-          "default": "/tmp/umami-mcp/sessions.db"
         },
         "UMAMI_OUTPUT_DIR": {
           "required": false,

@@ -18,7 +18,7 @@ test('umami settings are registered without guest-enabling MCP', async () => {
 
     assert.equal(manifest.guest, undefined);
     assert.equal(manifest.agent, 'sh /code/scripts/start-umami-agent.sh');
-    assert.equal(manifest.container, 'docker.io/assistos/umami-agent@sha256:d797b418dd13a6eb786cba4640656b6b1bc6e5da0467b98b5b8d335a250dd5a1');
+    assert.equal(manifest.container, 'docker.io/assistos/umami-agent@sha256:346a68283a88129f10c56ac940929dafbbf12f9b7cece3169d11d6a9f359ec93');
     assert.equal(manifest.enable, undefined);
     assert.equal(manifest.profiles.default.additionalServerPort, undefined);
     assert.equal(manifest.openPorts, undefined);
@@ -30,8 +30,10 @@ test('umami settings are registered without guest-enabling MCP', async () => {
     assert.equal(manifest.profiles.default.env.POSTGRES_PASSWORD.default, 'admin');
     assert.equal(manifest.profiles.default.env.APP_SECRET.sharedGeneratedSecret, true);
     assert.equal(manifest.profiles.default.env.UMAMI_BASE_URL.default, 'http://127.0.0.1:3000');
-    assert.equal(manifest.profiles.default.env.UMAMI_MCP_PORT.default, '7301');
-    assert.equal(manifest.profiles.default.env.MCP_SECRET.sharedGeneratedSecret, true);
+    assert.equal(manifest.profiles.default.env.UMAMI_INTERNAL_KEY_SEED.generatedSecret, true);
+    assert.equal(manifest.profiles.default.env.UMAMI_INTERNAL_KEY_SEED.required, true);
+    assert.equal(manifest.profiles.default.env.UMAMI_ADMIN_PASSWORD.required, false);
+    assert.equal(manifest.profiles.default.env.UMAMI_SEED_WEBSITES.required, false);
     assert.deepEqual(manifest.readiness, { protocol: 'mcp' });
     // No script: the block only sizes the MCP wait (2 + 2 s x 75 = 300 s) for restarts too.
     assert.deepEqual(manifest.health, { readiness: { interval: 2, timeout: 2, failureThreshold: 75, successThreshold: 1 } });
@@ -74,17 +76,15 @@ test('umami settings are registered without guest-enabling MCP', async () => {
     assert.equal(config.settings, 'umami-settings');
 });
 
-test('umami tool uses local HTTP MCP and OAuth bootstrap for MadsNyl', async () => {
+test('umami tool calls Umami\'s built-in MCP endpoint with the internal API key', async () => {
     const source = await fs.readFile(TOOL_JS, 'utf8');
-    assert.match(source, /class HttpMcpClient/);
-    assert.match(source, /bootstrapOAuthToken/);
-    assert.match(source, /\/oauth\/authorize/);
-    assert.match(source, /\/oauth\/token/);
+    assert.match(source, /class McpHttpClient/);
     assert.match(source, /\/mcp/);
-    assert.match(source, /get_active_visitors/);
+    assert.match(source, /UMAMI_INTERNAL_KEY_SEED/);
     assert.match(source, /toIsoTimestamp/);
-    assert.ok(!source.includes('@madsnyl/umami-mcp'));
-    assert.ok(!source.includes('StdioMcpClient'));
+    for (const removed of ['bootstrapOAuthToken', '/oauth/authorize', '/oauth/token', 'get_active_visitors', 'UMAMI_PASSWORD', 'MadsNyl', 'StdioMcpClient']) {
+        assert.ok(!source.includes(removed), `${removed} must be gone`);
+    }
 });
 
 test('umami MCP schemas use AgentServer property-map shape', async () => {

@@ -7,7 +7,7 @@ import test from 'node:test';
 import { gzipSync } from 'node:zlib';
 
 import {
-    createUmamiIngress, upstreamPath, verifyUmamiBuild, trackerCorsHeaders,
+    createUmamiIngress, isMcpPath, upstreamPath, verifyUmamiBuild, trackerCorsHeaders,
     UMAMI_BASE_PATH, UMAMI_PUBLIC_PORT, UMAMI_UPSTREAM_PORT,
 } from '../scripts/umami-ingress.mjs';
 
@@ -49,7 +49,7 @@ async function withIngress(handler, run) {
 
 test('only the exact source-built Router base path is admitted before startup', () => {
     const app = fs.mkdtempSync(path.join(os.tmpdir(), 'umami-build-'));
-    const metadata = { schema: 'ploinky.umami-build/v1', version: '3.2.0', sourceCommit: 'a'.repeat(40), basePath: UMAMI_BASE_PATH };
+    const metadata = { schema: 'ploinky.umami-build/v1', version: '3.4.1', sourceCommit: 'a'.repeat(40), basePath: UMAMI_BASE_PATH };
     fs.mkdirSync(path.join(app, '.next'));
     const write = (build = metadata, config = { basePath: UMAMI_BASE_PATH }) => {
         fs.writeFileSync(path.join(app, 'ploinky-umami-build.json'), JSON.stringify(build));
@@ -60,7 +60,7 @@ test('only the exact source-built Router base path is admitted before startup', 
         write();
         assert.deepEqual(verifyUmamiBuild(app), metadata);
         for (const override of [
-            { schema: 'unknown' }, { version: '3.1.0' }, { sourceCommit: 'main' }, { basePath: '' },
+            { schema: 'unknown' }, { version: '3.2.0' }, { sourceCommit: 'main' }, { basePath: '' },
         ]) {
             write({ ...metadata, ...override });
             assert.throws(() => verifyUmamiBuild(app), /required source-built Router base path/);
@@ -172,7 +172,7 @@ test('the tracker endpoint echoes the exact caller origin instead of Umami\'s wi
         assert.equal(preflight.status, 204);
         assert.equal(preflight.headers['access-control-allow-origin'], origin);
         assert.equal(preflight.headers['access-control-allow-methods'], 'POST, OPTIONS');
-        assert.equal(preflight.headers['access-control-allow-headers'], 'content-type');
+        assert.equal(preflight.headers['access-control-allow-headers'], 'content-type, x-umami-website-id, x-umami-hostname, x-umami-cache');
         assert.equal(preflight.headers['access-control-max-age'], '600');
         assert.equal(preflight.headers.vary, 'Origin');
         const send = await request(port, '/api/send', { method: 'POST', headers: { origin, 'content-type': 'application/json' }, body: '{}' });
@@ -189,4 +189,53 @@ test('tracker CORS ignores opaque or non-HTTP origins', () => {
     assert.equal(trackerCorsHeaders(headers, 'null'), headers);
     assert.equal(trackerCorsHeaders(headers, 'file:///tmp/x'), headers);
     assert.equal(trackerCorsHeaders(headers, 'https://site.example/path'), headers);
+});
+
+test('Router-forwarded requests for the built-in MCP endpoint get 404 in every spelling without contacting upstream', { timeout: 10_000 }, async () => {
+    const observed = [];
+    await withIngress((incoming, response) => { observed.push(`${incoming.method} ${incoming.url}`); response.end('upstream'); }, async ({ port }) => {
+        const headers = { 'x-forwarded-prefix': UMAMI_BASE_PATH };
+        const blocked = [
+            '/mcp', '/mcp/', '/mcp?a=1', '/mcp/sub', '/mcp/sub/deeper?x=%2e', '/./mcp', '/x/../mcp', '/x/%2e%2e/mcp',
+            '/x/%2E%2E/mcp', '/%2e/mcp', '/%6Dcp', '/%6dCP', '/MCP', '/Mcp/', '/mcp/%zz', '/x%2f..%2fmcp', '/.//mcp',
+        ];
+        for (const method of ['GET', 'POST', 'DELETE', 'OPTIONS']) {
+            for (const target of blocked) {
+                const result = await request(port, target, { method, headers });
+                assert.equal(result.status, 404, `${method} ${target}`);
+                assert.equal(result.body.toString(), 'Not found.');
+                assert.equal(result.headers['cache-control'], 'no-store');
+            }
+        }
+        assert.deepEqual(observed, []);
+
+        // Only the exact segment is blocked; neighbours still pass through.
+        for (const target of ['/mcpx', '/mc', '/api/mcp', '/_next/mcp', '/api/heartbeat?next=/mcp']) {
+            assert.equal((await request(port, target, { headers })).status, 200, target);
+        }
+        assert.deepEqual(observed, [
+            `GET ${UMAMI_BASE_PATH}/mcpx`, `GET ${UMAMI_BASE_PATH}/mc`, `GET ${UMAMI_BASE_PATH}/api/mcp`,
+            `GET ${UMAMI_BASE_PATH}/_next/mcp`, `GET ${UMAMI_BASE_PATH}/api/heartbeat?next=/mcp`,
+        ]);
+    });
+});
+
+test('in-container loopback calls without a forwarding prefix still reach the built-in MCP endpoint', { timeout: 10_000 }, async () => {
+    const observed = [];
+    await withIngress((incoming, response) => {
+        observed.push({ method: incoming.method, path: incoming.url, authorization: incoming.headers.authorization });
+        response.writeHead(200, { 'content-type': 'application/json' });
+        response.end('{"jsonrpc":"2.0"}');
+    }, async ({ port }) => {
+        const result = await request(port, '/mcp', { method: 'POST', headers: { authorization: 'Bearer umami_fixture', 'content-type': 'application/json' }, body: '{}' });
+        assert.equal(result.status, 200);
+        assert.deepEqual(observed, [{ method: 'POST', path: `${UMAMI_BASE_PATH}/mcp`, authorization: 'Bearer umami_fixture' }]);
+        assert.equal((await request(port, '/x/../mcp', { method: 'POST' })).status, 200);
+    });
+});
+
+test('isMcpPath resolves the same target the application would route', () => {
+    for (const target of ['/mcp', '/mcp/', '/mcp?x=1', '/a/../mcp', '/%6dcp/tools']) assert.equal(isMcpPath(target), true, target);
+    for (const target of ['/', '/mcpx', '/xmcp', '/api/mcp', '/mcp-config', '/api/heartbeat']) assert.equal(isMcpPath(target), false, target);
+    assert.equal(isMcpPath('http://other.invalid/mcp'), false);
 });

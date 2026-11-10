@@ -7,35 +7,26 @@ POSTGRES_USER="${POSTGRES_USER:-admin}"
 POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-admin}"
 UMAMI_APP_PORT="${UMAMI_APP_PORT:-3000}"
 UMAMI_UPSTREAM_PORT=3001
-UMAMI_MCP_DIR="${UMAMI_MCP_DIR:-/opt/umami-mcp}"
-UMAMI_MCP_PORT="${UMAMI_MCP_PORT:-7301}"
-UMAMI_BASE_URL="${UMAMI_BASE_URL:-http://127.0.0.1:${UMAMI_APP_PORT}}"
-UMAMI_MCP_SQLITE_PATH="${UMAMI_MCP_SQLITE_PATH:-/tmp/umami-mcp/sessions.db}"
-OAUTH_CLIENT_ID="${OAUTH_CLIENT_ID:-umami-agent}"
-OAUTH_REDIRECT_URI="${OAUTH_REDIRECT_URI:-http://127.0.0.1:${UMAMI_MCP_PORT}/oauth/callback}"
-BUN_INSTALL="${BUN_INSTALL:-/opt/bun}"
+NPM_CLI=/usr/local/lib/node_modules/npm/bin/npm-cli.js
 
 : "${APP_SECRET:?APP_SECRET is required}"
-: "${MCP_SECRET:?MCP_SECRET is required}"
+: "${UMAMI_INTERNAL_KEY_SEED:?UMAMI_INTERNAL_KEY_SEED is required}"
 
-export PATH="${BUN_INSTALL}/bin:/root/.bun/bin:${PATH}"
 export DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5432/${POSTGRES_DB}"
 export HOSTNAME="${HOSTNAME:-0.0.0.0}"
 export APP_SECRET
 export BASE_PATH='/base-agent-additional-server/umamiAgent/3000'
-export UMAMI_URL="${UMAMI_BASE_URL}"
-export MCP_SECRET
-export OAUTH_CLIENT_ID
-export OAUTH_REDIRECT_URI
-export SQLITE_PATH="${UMAMI_MCP_SQLITE_PATH}"
+# Umami's built-in read-only MCP endpoint (/mcp). It accepts API keys only; the
+# ingress hides it from the Router and the agent's tools call it over loopback.
+export MCP_ENABLED=1
 export PGPASSWORD="${POSTGRES_PASSWORD}"
 
-mkdir -p "$(dirname "${UMAMI_MCP_SQLITE_PATH}")"
-
-if [ ! -f "${UMAMI_MCP_DIR}/dist/index.js" ]; then
-    echo "ERROR: ${UMAMI_MCP_DIR}/dist/index.js is missing from the umami-agent image." >&2
-    exit 1
-fi
+# The internal API key seed and the enforced admin password are only needed by
+# the bootstrap and by AgentServer's tools. Keep them out of the environment of
+# PostgreSQL, Next.js and the ingress.
+internal_key_seed="${UMAMI_INTERNAL_KEY_SEED}"
+admin_password="${UMAMI_ADMIN_PASSWORD:-}"
+unset UMAMI_INTERNAL_KEY_SEED UMAMI_ADMIN_PASSWORD
 
 if [ ! -f /app/server.js ]; then
     echo "ERROR: /app/server.js is missing from the umami-agent image." >&2
@@ -52,9 +43,6 @@ cleanup() {
     if [ -n "${agent_server_pid:-}" ]; then
         kill "${agent_server_pid}" 2>/dev/null || true
     fi
-    if [ -n "${umami_mcp_pid:-}" ]; then
-        kill "${umami_mcp_pid}" 2>/dev/null || true
-    fi
     if [ -n "${umami_app_pid:-}" ]; then
         kill "${umami_app_pid}" 2>/dev/null || true
     fi
@@ -68,7 +56,7 @@ cleanup() {
 trap cleanup INT TERM EXIT
 
 start_agent_server() {
-    PORT="${PLOINKY_AGENT_SERVER_PORT:-7000}" sh /Agent/server/AgentServer.sh &
+    UMAMI_INTERNAL_KEY_SEED="${internal_key_seed}" PORT="${PLOINKY_AGENT_SERVER_PORT:-7000}" sh /Agent/server/AgentServer.sh &
     agent_server_pid="$!"
 }
 
@@ -154,17 +142,28 @@ fi
 unset NODE_OPTIONS
 
 cd /app
-node /usr/local/lib/node_modules/npm/bin/npm-cli.js run check-db
-node scripts/update-tracker.js
+node "${NPM_CLI}" run check:db
+node "${NPM_CLI}" run update:tracker
+
+# Enforce the admin password and the internal API key before Umami starts, so
+# no request is served with a stale credential.
+UMAMI_INTERNAL_KEY_SEED="${internal_key_seed}" UMAMI_ADMIN_PASSWORD="${admin_password}" \
+    node /code/scripts/umami-bootstrap.mjs db
+
 HOSTNAME=127.0.0.1 PORT="${UMAMI_UPSTREAM_PORT}" node server.js &
 umami_app_pid="$!"
 node /code/scripts/umami-ingress.mjs &
 umami_ingress_pid="$!"
 
+# Fetch probes use Node, which the runtime image always provides.
+umami_http_ok() {
+    node -e 'fetch(process.argv[1], { signal: AbortSignal.timeout(2000) }).then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))' "$1"
+}
+
 ready=0
 for _ in $(seq 1 60); do
-    if curl -fsS "http://127.0.0.1:${UMAMI_APP_PORT}/api/heartbeat" >/dev/null 2>&1 \
-        || curl -fsS "http://127.0.0.1:${UMAMI_APP_PORT}/" >/dev/null 2>&1; then
+    if umami_http_ok "http://127.0.0.1:${UMAMI_APP_PORT}/api/heartbeat" \
+        || umami_http_ok "http://127.0.0.1:${UMAMI_APP_PORT}/"; then
         ready=1
         break
     fi
@@ -180,28 +179,10 @@ if [ "${ready}" != "1" ]; then
     exit 1
 fi
 
-cd "${UMAMI_MCP_DIR}"
-PORT="${UMAMI_MCP_PORT}" bun run dist/index.js &
-umami_mcp_pid="$!"
-
-ready=0
-for _ in $(seq 1 60); do
-    if curl -fsS "http://127.0.0.1:${UMAMI_MCP_PORT}/health" >/dev/null 2>&1; then
-        ready=1
-        break
-    fi
-    if ! kill -0 "${umami_mcp_pid}" 2>/dev/null; then
-        echo "ERROR: umami-mcp exited before becoming healthy." >&2
-        wait "${umami_mcp_pid}" || true
-        exit 1
-    fi
-    sleep 1
-done
-
-if [ "${ready}" != "1" ]; then
-    echo "ERROR: timed out waiting for umami-mcp on port ${UMAMI_MCP_PORT}." >&2
-    exit 1
-fi
+# Seed or verify the configured websites through Umami's API with the internal
+# key. A website id owned by another user stops the stack.
+UMAMI_INTERNAL_KEY_SEED="${internal_key_seed}" UMAMI_BASE_URL="http://127.0.0.1:${UMAMI_APP_PORT}" \
+    node /code/scripts/umami-bootstrap.mjs api
 
 if [ -z "${agent_server_pid:-}" ]; then
     start_agent_server
@@ -210,14 +191,12 @@ fi
 while kill -0 "${postgres_pid}" 2>/dev/null \
     && kill -0 "${umami_app_pid}" 2>/dev/null \
     && kill -0 "${umami_ingress_pid}" 2>/dev/null \
-    && kill -0 "${umami_mcp_pid}" 2>/dev/null \
     && kill -0 "${agent_server_pid}" 2>/dev/null; do
     sleep 1
 done
 
 cleanup
 wait "${agent_server_pid}" 2>/dev/null || true
-wait "${umami_mcp_pid}" 2>/dev/null || true
 wait "${umami_app_pid}" 2>/dev/null || true
 wait "${umami_ingress_pid}" 2>/dev/null || true
 wait "${postgres_pid}" 2>/dev/null || true
