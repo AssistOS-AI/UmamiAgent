@@ -53,7 +53,8 @@ test('umami settings are registered without guest-enabling MCP', async () => {
         },
         {
             path: '/base-agent-additional-server/umamiAgent/3000/script.js',
-            access: 'public'
+            access: 'public',
+            cache: 'page'
         },
         {
             path: '/base-agent-additional-server/umamiAgent/3000/api/send',

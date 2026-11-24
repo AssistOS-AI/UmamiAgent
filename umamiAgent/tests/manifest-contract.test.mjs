@@ -20,11 +20,18 @@ test('api/send admits exactly the tracker headers the ingress advertises', () =>
     assert.deepEqual([...send.publicProtocol.allowHeaders].sort(), [...advertised].sort());
 });
 
+test('only the tracker script carries a Cloudflare cache mark', () => {
+    const marked = manifest.routerAccess.httpRoutes.filter((route) => 'cache' in route);
+    assert.deepEqual(marked.map((route) => [route.path, route.access, route.cache]), [
+        [`${BASE}/script.js`, 'public', 'page'],
+    ]);
+});
+
 test('exactly the two tracker routes are public and nothing else under /api is', () => {
     const routes = manifest.routerAccess.httpRoutes;
     const publicRoutes = routes.filter((route) => route.access === 'public');
     assert.deepEqual(publicRoutes, [
-        { path: `${BASE}/script.js`, access: 'public' },
+        { path: `${BASE}/script.js`, access: 'public', cache: 'page' },
         { path: `${BASE}/api/send`, access: 'public', publicProtocol: {
             methods: ['POST', 'OPTIONS'], allowCors: true,
             allowHeaders: ['content-type', 'x-umami-website-id', 'x-umami-hostname', 'x-umami-cache'],
