@@ -94,7 +94,10 @@
           "default": "/shared/deliverables/umami"
         }
       }
-    }
+    },
+    "dev": {},
+    "qa": {},
+    "prod": {}
   },
   "ideSettings": [
     {
