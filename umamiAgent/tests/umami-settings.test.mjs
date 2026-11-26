@@ -140,12 +140,12 @@ test('umami toolbar button opens the Umami Settings popup', async () => {
     assert.equal(config.component, 'umami-tool-button');
     assert.equal(config.presenter, 'UmamiToolButton');
     assert.deepEqual(config.location, ['file-exp:toolbar']);
-    assert.equal(config.toolbarModal, undefined);
+    assert.equal(config.toolbarModal.component, 'umami-settings');
+    assert.equal(config.dependencies[0].component, 'umami-settings');
     const source = await fs.readFile(path.join(ROOT, 'IDE-plugins', 'umami-tool-button', 'umami-tool-button.js'), 'utf8');
     assert.match(source, /export class UmamiToolButton/);
-    assert.match(source, /ensureSettingsComponentRegistered/);
-    assert.match(source, /openExpandedModal\(\{\s*mode: 'component',\s*component: UMAMI_SETTINGS_COMPONENT/);
-    assert.ok(source.includes("'/base-agent-additional-server/umamiAgent/3000/websites'"));
+    assert.match(source, /openPluginPanel\('umamiAgent\/umami'\)/);
+    assert.doesNotMatch(source, /window\.open/);
 });
 
 test('Open Dashboard targets the Umami websites page', async () => {

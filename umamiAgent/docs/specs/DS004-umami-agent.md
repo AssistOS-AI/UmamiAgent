@@ -113,3 +113,5 @@ Readiness is the MCP handshake (`readiness.protocol: "mcp"`). The manifest's scr
 #### Static tracker settings
 
 The settings surface only needs to generate a browser snippet and read the existing website list through the declared MCP tool. A static IDE plugin keeps the router boundary simple, avoids a second application endpoint, and does not introduce any event ingestion path through `umamiAgent`.
+
+The Umami launcher declares the existing settings component as its toolbar panel and dependency. Explorer owns its opening and its Tools new-tab action; the main action opens settings in the shared panel and the trailing icon opens the same settings in a separate tab.

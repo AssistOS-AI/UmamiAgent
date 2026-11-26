@@ -12,5 +12,17 @@
     "presenter": "UmamiToolButton",
     "type": "embedded",
     "autoPin": false,
-    "dependencies": []
+    "dependencies": [
+        {
+            "component": "umami-settings",
+            "presenter": "UmamiSettings",
+            "type": "global",
+            "baseUrl": "/umamiAgent/IDE-plugins/umami-settings/umami-settings"
+        }
+    ],
+    "toolbarModal": {
+        "mode": "component",
+        "component": "umami-settings",
+        "fullscreen": true
+    }
 }
